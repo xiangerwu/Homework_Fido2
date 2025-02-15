@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebAuthn 測試</title>
+    </head>
+
+    <body>
+        <h2>Https 網頁中的 WebAuthn 註冊</h2>
+        <!-- 主要功能 -->
+        <input type="text" id="username" placeholder="輸入使用者名稱" />
+        <button onclick="register()">註冊 ID </button>
+        <button onclick="authenticate()">認證 ID </button>
+        <!-- 隔開 -->
+        <hr />
+        <button onclick="clearData()">清除全部憑證資訊(All Users)</button>
+        <hr />
+
+        <!--  -->
+        <h2>註冊後瀏覽器內憑證資料:</h2>
+        <pre id="Register_credentialInfo"></pre>
+
+        <!--  -->
+        <h2>認證結果</h2>
+        <pre id="Authenticate_credentialInfo"></pre>
+        <!-- 使用者列表 -->
+        <h2>認證完成的 ID 列表:</h2>
+        <table id="UsersTable" border="1">
+            <!-- 表格內容將由 JavaScript 動態生成 -->
+        </table>
+
+        <!-- 函式 -->
+        <script>
+            // 定義一個全域變數用於儲存瀏覽器的認證資料
+            let globol_credential = null;
+
+            // 將 base64url 字串轉換為 Uint8Array
+            function base64UrlToUint8Array(base64Url) {
+                if (!base64Url) {
+                    throw new Error("base64Url is undefined");
+                }
+                const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/"); // base64url -> base64
+                const padding = "=".repeat((4 - (base64.length % 4)) % 4); // 確保正確的 padding
+                const base64WithPadding = base64 + padding;
+                const rawData = atob(base64WithPadding); // base64 -> 原始資料
+                const uint8Array = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; i++) {
+                    uint8Array[i] = rawData.charCodeAt(i);
+                }
+                return uint8Array;
+            }
+
+            // 將 Uint8Array 轉換為 base64url 字串
+            function uint8ArrayToBase64Url(uint8Array) {
+                const binaryString = String.fromCharCode(...uint8Array);
+                return btoa(binaryString)
+                    .replace(/\+/g, "-")
+                    .replace(/\//g, "_")
+                    .replace(/=+$/, "");
+            }
+
+            // async 函式 (WebAuthn 註冊)
+            async function register() {
+                // 取得使用者名稱
+                const username = document.getElementById("username").value;
+                if (!username) {
+                    alert("請輸入使用者名稱");
+                    return;
+                }
+                // 執行 WebAuthn 註冊
+                try {
+                    // 向後端請求 WebAuthn 註冊選項
+                    const response = await fetch(
+                        "https://localhost:5000/register",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ username }),
+                        }
+                    );
+                    // await 關鍵字會等待 response 回應後才繼續執行
+                    const options = await response.json();
+                    console.log("註冊選項:", options);
+                    // 判斷 options 是否 error
+                    if (options.error) {
+                        console.error("註冊錯誤:", options.error);
+                        alert("註冊失敗:" + options.error + "！");
+                        return;
+                    }
+                    // 將選項轉換為 WebAuthn API 可用的格式
+                    // 這裡的 challenge 和 user.id 都是 base64url 字串
+                    console.log(
+                        "base64url : options.challenge:",
+                        options.challenge
+                    );
+                    console.log(
+                        "base64url : options.user.id:",
+                        options.user.id
+                    );
+
+                    // 將 base64url 字串轉換為 Uint8Array
+                    options.challenge = base64UrlToUint8Array(
+                        options.challenge
+                    );
+                    options.user.id = base64UrlToUint8Array(options.user.id);
+                    console.log(
+                        "Uint8Array : options.challenge:",
+                        options.challenge
+                    );
+                    console.log(
+                        "Uint8Array : options.user.id:",
+                        options.user.id
+                    );
+
+                    // 呼叫 瀏覽器 WebAuthn API 進行註冊
+                    const credential = await navigator.credentials.create({
+                        publicKey: options,
+                    });
+                    console.log("已註冊憑證:", credential);
+
+                    // 顯示憑證資訊在網頁上
+                    document.getElementById(
+                        "Register_credentialInfo"
+                    ).textContent =
+                        "User : " +
+                        username +
+                        "\n" +
+                        JSON.stringify(credential, null, 2);
+
+                    // 暫存憑證資訊
+                    globol_credential = credential;                
+
+                    alert("註冊成功！請查看憑證資訊，接下來嘗試認證看看。");
+                } catch (error) {
+                    console.error("註冊錯誤:", error);
+                    alert("註冊失敗:,", options.error, "！");
+                }
+            } // end of register()
+
+            // async 函式 (WebAuthn 認證)
+            async function authenticate() {
+
+                // new Uint8Array(arg) 會將 arg 轉換為 Uint8Array
+                function New_Uni8ArrayToBase64Url(arg) {
+                    return uint8ArrayToBase64Url(new Uint8Array(arg));
+                }
+
+                // 將 ArrayBuffer 轉換為 base64 字串
+                function arrayBufferToBase64(buffer) {
+                    let binary = "";
+                    const bytes = new Uint8Array(buffer);
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    return btoa(binary); // Base64 編碼
+                }
+
+                // 取得使用者名稱
+                const username = document.getElementById("username").value;
+                if (!username) {
+                    alert("請輸入使用者名稱");
+                    return;
+                }
+                // 取得註冊時的憑證資訊
+                const credentialData = {
+                    id: globol_credential.id,
+                    type: globol_credential.type,
+                    rawId: arrayBufferToBase64(globol_credential.rawId),
+                    response: {
+                        clientDataJSON: arrayBufferToBase64(
+                            globol_credential.response.clientDataJSON
+                        ),
+                        attestationObject: arrayBufferToBase64(
+                            globol_credential.response.attestationObject
+                        ),
+                    },
+                };
+
+                // 顯示憑證資訊在主控台上
+                console.log(
+                    "要發送的 credentialData:",
+                    JSON.stringify(credentialData, null, 2)
+                );
+
+                // 執行 WebAuthn 認證
+                try {
+                    // 向後端請求 WebAuthn 認證選項
+                    const response = await fetch(
+                        "https://localhost:5000/verify-register",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                username: username,
+                                credentialData: credentialData,
+                            }),
+                        }
+                    );
+                    // await 關鍵字會等待 response 回應後才繼續執行
+                    const options = await response.json();
+                    console.log("認證選項:", options);
+                    // 判斷 options 是否 error
+                    if (options.error) {
+                        console.error("認證錯誤:", options.error);
+                        alert("認證失敗！");
+                        return;
+                    }
+                    alert("已成功認證！");
+
+                    // 成功認證後 顯示使用者列表與成功資訊在網頁上
+                    document.getElementById(
+                        "Authenticate_credentialInfo"
+                    ).textContent = JSON.stringify(options.message, null, 2);
+
+                    // 顯示使用者列表
+                    const usersTable = document.getElementById("UsersTable");
+                    usersTable.innerHTML = ""; // 清空現有的使用者列表
+
+                    // 添加表格標題
+                    const headerRow = document.createElement("tr");
+                    headerRow.innerHTML = "<th>編號</th><th>ID</th>";
+                    usersTable.appendChild(headerRow);
+
+                    // 添加使用者資料
+                    options.userlist.forEach((user, index) => {
+                        const userRow = document.createElement("tr");
+                        userRow.innerHTML = `<td>${
+                            index + 1
+                        }</td><td>${user}</td>`;
+                        usersTable.appendChild(userRow);
+                    });
+                } catch (error) {
+                    console.error("認證錯誤:", error);
+                    alert("認證失敗！ 原因:" + error);
+                } // end of authenticate()
+            }
+
+            // 清除憑證資訊
+            async function clearData() {
+                document.getElementById("Register_credentialInfo").textContent =
+                    "";
+                document.getElementById(
+                    "Authenticate_credentialInfo"
+                ).textContent = "";
+                globol_credential = null;
+
+                try {
+                    const response = await fetch(
+                        "https://localhost:5000/clear",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify("No Data"),
+                        }
+                    );
+
+                    const result = await response.json();
+                    console.log("清除結果:", result);
+                    alert("憑證資訊已清除！");
+                } catch (error) {
+                    console.error("清除錯誤:", error);
+                    alert("清除失敗！");
+                }
+            } // end of clear()
+        </script>
+    </body>
+</html>
