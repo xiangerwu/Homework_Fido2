@@ -10,7 +10,7 @@
             "request": "launch",
             "module": "flask",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}\\python\\fido-env",
+                "PYTHONPATH": "${workspaceFolder}\\python\\fido-env\\Script\\python.exe",
                 "FLASK_APP": "python\\app.py",
                 "FLASK_DEBUG": "1"
             },

@@ -9,6 +9,7 @@ from webauthn.helpers.options_to_json import options_to_json
 from webauthn import (
     generate_registration_options,
     verify_registration_response,
+    verify_authentication_response,
     options_to_json,
     base64url_to_bytes,
 )
@@ -16,15 +17,19 @@ from webauthn import (
 from webauthn.helpers.structs import (
     PublicKeyCredentialRpEntity,
     PublicKeyCredentialUserEntity,
-    AuthenticatorSelectionCriteria,
     RegistrationCredential,
+    AuthenticationCredential,
+    AuthenticatorAttestationResponse,
+    AuthenticatorSelectionCriteria,
+    AuthenticatorAssertionResponse,
     UserVerificationRequirement,
     AttestationConveyancePreference,
+    ResidentKeyRequirement,
 )
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 sslify = SSLify(app)
 app.secret_key = os.urandom(24)  # 設定 Session 金鑰
 
@@ -40,16 +45,17 @@ users = {}
 # 首頁
 @app.route("/")
 def home():
-    return "Hello, Secure World!"
+    # 顯示歡迎詞並且增加超連結到 /main
+    return """Hello, World! <a href="/main">點擊進入 WebAuthn 環節</a>"""
 
 
 # 主要瀏覽 index.html
 @app.route("/main")
 def main():
-    return render_template("index.html")  # 將 index.html 載入並渲染
+    return render_template("index.html")
 
 
-# 註冊頁面
+# 註冊頁面 /register
 @app.route("/register", methods=["POST"])
 def register():
     """產生 WebAuthn 註冊選項"""
@@ -82,16 +88,14 @@ def register():
         user_name=user.name,  # 用戶名稱
         user_id=user.id,  # 用戶 ID
         authenticator_selection=AuthenticatorSelectionCriteria(
-            user_verification=UserVerificationRequirement.PREFERRED
+            user_verification=UserVerificationRequirement.PREFERRED,
+            resident_key=ResidentKeyRequirement.REQUIRED,
         ),
         attestation=AttestationConveyancePreference.DIRECT,
     )
 
     # 使用 options_to_json 函式將 options 轉換為 JSON 類型
     options_json = options_to_json(options)
-
-    # 這將輸出 JSON 格式的字串
-    # print(options_json)
 
     # 把 options_json 儲存到 users[username] 中 (方便之後回傳)
     options_dict = json.loads(options_json)  # 將 JSON 解析回 Python 字典
@@ -103,7 +107,7 @@ def register():
     return jsonify(json.loads(options_json))  # 回傳給前端
 
 
-# 驗證註冊回應
+# 驗證註冊回應 /verify-register
 @app.route("/verify-register", methods=["POST"])
 def verify_register():
     """驗證 WebAuthn 註冊回應"""
@@ -117,75 +121,141 @@ def verify_register():
     if username not in users:
         return jsonify({"error": "用戶不存在"}), 400
 
-    # 取得用戶註冊資料
-    credential_data = data.get("credentialData")
-    # 如果沒有註冊資料，回傳錯誤
-    if credential_data is None:
-        return jsonify({"error": "請提供 credentialData"}), 400
-    # 判斷 credential_data 內容
-    if not all(key in credential_data for key in ["id", "rawId", "response", "type"]):
-        return jsonify({"error": "credentialData 格式錯誤"}), 400
+    # 查詢 users[username] 中的註冊資料
+    registration_data = users[username]
+    # 如果註冊資料不存在，回傳錯誤
+    if registration_data is None:
+        return jsonify({"error": "註冊資料不存在"}), 400
 
-    # 取得暫存的 challenge
-    expected_challenge = session.get("challenge", None)
-    #  如果 challenge 不存在，回傳錯誤
-    if expected_challenge is None:
-        return jsonify({"error": "session 的 challenge 不存在 "}), 400
-
-    # 開始驗證註冊回應
-    try:
-
-        # 使用 verify_registration_response 驗證註冊回應
-        verified_registration = verify_registration_response(
-            credential={
-                "id": credential_data["id"],
-                "rawId": credential_data["rawId"],
-                "response": {
-                    "attestationObject": credential_data["response"][
-                        "attestationObject"
-                    ],
-                    "clientDataJSON": credential_data["response"]["clientDataJSON"],
-                },
-                "type": credential_data["type"],
-            },
-            expected_challenge=expected_challenge,
-            expected_rp_id=RP_ID,
-            expected_origin=ORIGIN,
+    # 將 bytes 類型數據轉換為 Base64 編碼
+    # 先判斷 registration_data 中id 是否為 bytes 類型，如果是，則轉換為 Base64 編碼
+    if isinstance(registration_data["id"], bytes):
+        registration_data["id"] = base64.b64encode(registration_data["id"]).decode(
+            "utf-8"
         )
 
-        # 取得用戶名稱
-        username = data.get("username")
-        if username in users:
-            # 更新用戶資料
-            users[username]["credential"] = {
-                "id": verified_registration.credential_id,
-                "publicKey": verified_registration.credential_public_key,
-                "signCount": verified_registration.sign_count,
-            }
+    if "challenge" in registration_data and isinstance(
+        registration_data["challenge"], bytes
+    ):
+        registration_data["challenge"] = base64.b64encode(
+            registration_data["challenge"]
+        ).decode("utf-8")
 
-            # 驗證成功後移除 challenge (棄用)
-            # session.pop("challenge", None)
+    # 存在的話，取得註冊資料後打包成前端可以接收的格式
+    registration_data = json.dumps(registration_data)
+    # 回傳給前端
+    return jsonify(json.loads(registration_data))
 
-            # print(users)
-            # 使用新變數 userlist 遍歷 Users 之中得 username 並存為 json 回傳
-            userlist = []
-            for user in users:
-                userlist.append(user)
-            return jsonify(
-                {
-                    "status": "ok",
-                    "message": "成功認證",
-                    "userlist": userlist,
-                }
-            )
-        else:
-            return jsonify({"error": "用戶不存在"}), 400
 
+# 存儲憑證 /store-credential
+@app.route("/store-credential", methods=["POST"])
+def store_credential():
+    """存儲 WebAuthn 憑證"""
+    data = request.json
+    if data is None:
+        return jsonify({"error": "請提供有效的 JSON 數據"}), 400
+
+    username = data.get("username")
+    if username not in users:
+        return jsonify({"error": "用戶不存在"}), 400
+
+    credential_data = data.get("credential")
+    if credential_data is None:
+        return jsonify({"error": "請提供 credential"}), 400
+
+    try:
+        # 驗證註冊回應
+        verified_registration = verify_registration_response(
+            credential=RegistrationCredential(
+                id=credential_data["id"],
+                raw_id=base64url_to_bytes(credential_data["rawId"]),
+                response=AuthenticatorAttestationResponse(
+                    attestation_object=base64url_to_bytes(
+                        credential_data["response"]["attestationObject"]
+                    ),
+                    client_data_json=base64url_to_bytes(
+                        credential_data["response"]["clientDataJSON"]
+                    ),
+                ),
+                type=credential_data["type"],
+            ),
+            expected_challenge=base64url_to_bytes(session["challenge"]),
+            expected_origin=ORIGIN,
+            expected_rp_id=RP_ID,
+        )
+
+        # 存儲憑證資料
+        users[username]["credential"] = {
+            "id": verified_registration.credential_id,
+            "publicKey": verified_registration.credential_public_key,
+            "signCount": verified_registration.sign_count,
+        }
+
+        return jsonify({"status": "ok", "message": "憑證已存儲"})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 
-# 清除用戶資料
+# 驗證憑證回應 /verify-credential
+@app.route("/verify-credential", methods=["POST"])
+def verify_credential():
+    """驗證 WebAuthn 憑證回應"""
+    data = request.json
+    if data is None:
+        return jsonify({"error": "請提供有效的 JSON 數據"}), 400
+
+    username = data.get("username")
+    if username not in users:
+        return jsonify({"error": "用戶不存在"}), 400
+
+    credential_data = data.get("credential")
+    if credential_data is None:
+        return jsonify({"error": "請提供 credential"}), 400
+
+    expected_challenge = session.get("challenge", None)
+    if expected_challenge is None:
+        return jsonify({"error": "session 的 challenge 不存在"}), 400
+
+    try:
+        verified_authentication = verify_authentication_response(
+            credential=AuthenticationCredential(
+                id=credential_data["id"],
+                raw_id=base64url_to_bytes(credential_data["rawId"]),
+                response=AuthenticatorAssertionResponse(
+                    client_data_json=base64url_to_bytes(
+                        credential_data["response"]["clientDataJSON"]
+                    ),
+                    authenticator_data=base64url_to_bytes(
+                        credential_data["response"]["authenticatorData"]
+                    ),
+                    signature=base64url_to_bytes(
+                        credential_data["response"]["signature"]
+                    ),
+                    user_handle=(
+                        base64url_to_bytes(credential_data["response"]["userHandle"])
+                        if credential_data["response"]["userHandle"]
+                        else None
+                    ),
+                ),
+                type=credential_data["type"],
+            ),
+            expected_challenge=expected_challenge,
+            expected_rp_id=RP_ID,
+            expected_origin=ORIGIN,
+            credential_public_key=users[username]["credential"]["publicKey"],
+            credential_current_sign_count=users[username]["credential"]["signCount"],
+        )
+
+        users[username]["credential"][
+            "signCount"
+        ] = verified_authentication.new_sign_count
+
+        return jsonify({"status": "ok", "message": "成功認證"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# 清除用戶資料 /clear
 @app.route("/clear", methods=["POST"])
 def clear():
     """清除全部用戶資料"""
