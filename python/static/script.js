@@ -77,9 +77,9 @@ async function register() {
     // 執行 WebAuthn 註冊
     try {
         // 向後端請求 WebAuthn 註冊選項
-        const options = await sendRequest("/register", "POST", { username });        
+        const options = await sendRequest("/register", "POST", { username });
         console.log("後端回傳 challenge:", options.challenge);
-        showMessage("Register_Challenge",options.challenge)
+        showMessage("Register_Challenge", options.challenge)
         // 判斷 options 是否 error
         if (options.error) {
             console.error("註冊錯誤:", options.error);
@@ -94,7 +94,7 @@ async function register() {
         options.user.id = base64UrlToUint8Array(options.user.id);
 
         // 之後將憑證資訊儲存到瀏覽器的 API 中
-        const credential = await navigator.credentials.create({ publicKey: options});
+        const credential = await navigator.credentials.create({ publicKey: options });
         console.log("瀏覽器已註冊憑證:", credential);
 
         showMessage("Register_credentialInfo", `User: ${username}\n${JSON.stringify(credential, null, 2)}`);
@@ -149,7 +149,7 @@ async function verify_register() {
 
         // 取得後端回應
         console.log("認證選項:", options.challenge);
-        showMessage("Verify_Challenge",options.challenge)
+        showMessage("Verify_Challenge", options.challenge)
         if (options.error) {
             console.error("認證錯誤(後端回應 error):", options.error);
             alert("認證失敗(後端回應 error):" + options.error + "！");
@@ -211,7 +211,7 @@ async function verify_register() {
 async function clearData() {
     showMessage("Register_credentialInfo", "");
     showMessage("verify-register_credentialInfo", "");
-    
+
     try {
         const result = await sendRequest("/clear", "POST", "No Data");
         console.log("清除結果:", result);
