@@ -3,6 +3,7 @@
 這是一個 **使用 Fido2 技術進行 WebAuthn 註冊和認證** 的專案，後端使用 **Flask**，前端透過 **JavaScript** 與 WebAuthn API 交互。  
 
 ## **📂 目錄結構**
+```
 Fido2/ 
 ├── python/ 
 │ ├── app.py # Flask 後端 API 
@@ -11,7 +12,7 @@ Fido2/
 │ ├── templates/ 
 │ │ └── index.html # 前端 HTML 
 └──
-
+```
 ### **🖥️ 伺服器運行**
 本專案運行於：  
 👉 **`https://localhost:5000`**
