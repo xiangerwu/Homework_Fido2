@@ -1,0 +1,20 @@
+[ req ]
+default_bits = 2048
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+[ req_distinguished_name ]
+C = TW # 國家代碼 (台灣)
+ST = Yunlin # 省/市
+L = Douliu # 城市
+O = Your Organization # 組織名稱
+OU = IT Department # 部⾨
+CN = 192.168.50.222 # Common Name，主域名
+[ v3_req ]
+keyUsage = critical, digitalSignature, keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[ alt_names ]
+DNS.1 = wzx_test.com # 主要域名
+DNS.2 = yuntech.wzx_test.com # 次要域名
+IP.1 = 192.168.50.222

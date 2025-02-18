@@ -15,10 +15,10 @@ Fido2/
 ```
 ### **🖥️ 伺服器運行**
 本專案運行於：  
-👉 **`https://localhost:5000`**
+👉 **`https://wzx_test.com:5000`**
 
 ### **🚀 註冊 & 認證**
-1. **打開瀏覽器**：前往 `https://localhost:5000/main`
+1. **打開瀏覽器**：前往 `https://wzx_test.com:5000/main`
 2. **註冊 ID**：
    - 輸入使用者名稱
    - 點擊 **「註冊 ID」** 按鈕
@@ -96,9 +96,7 @@ Fido2/
 pip install flask flask-cors flask-sslify webauthn
 ```
 2. 生成 SSL 憑證 (自簽)
-```
-openssl req -x509 -newkey rsa:4096 -keyout localhost-key.pem -out localhost.pem -days 365 -nodes
-```
+
 3. 運行 Flask 伺服器
 ```
 python app.py
@@ -110,3 +108,14 @@ python app.py
     WebAuthn API - FIDO2 身份驗證
     JavaScript Fetch API - 與後端交互
     Base64 編碼 - 儲存 bytes 型態資料
+
+
+
+    使用系統管理員修改
+     C:\WINDOWS\system32\drivers\etc\hosts 
+     加入 
+     
+     ```
+     192.168.50.222 wzx_test.com
+
+     ```

@@ -26,17 +26,19 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
     AttestationConveyancePreference,
     ResidentKeyRequirement,
+    AuthenticatorAttachment,
 )
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app,origins="*", supports_credentials=True)
+
 sslify = SSLify(app)
 app.secret_key = os.urandom(24)  # 設定 Session 金鑰
 
 # RP (Relying Party) 服務端資訊
-RP_ID = "localhost"  # 你的網域
+RP_ID = "wzx_test.com"  # 你的網域
 RP_NAME = "My WebAuthn App"
-ORIGIN = "https://localhost:5000"
+ORIGIN = "https://wzx_test.com:5000"
 
 # 模擬用戶資料庫
 users = {}
@@ -53,6 +55,16 @@ def encode_bytes_to_base64(data):
     elif isinstance(data, list):
         return [encode_bytes_to_base64(item) for item in data]
     return data
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+
 
 
 # 首頁
@@ -101,6 +113,7 @@ def register():
         user_name=user.name,  # 用戶名稱
         user_id=user.id,  # 用戶 ID
         authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  
             user_verification=UserVerificationRequirement.PREFERRED,
             resident_key=ResidentKeyRequirement.REQUIRED,
         ),
@@ -272,5 +285,6 @@ def clear():
 
 # 啟動伺服器
 if __name__ == "__main__":
-    context = ("localhost.pem", "localhost-key.pem")  # SSL 憑證
-    app.run(debug=True, ssl_context=context)  # 啟動伺服器
+    # context = ("localhost.pem", "localhost-key.pem")  # SSL 憑證
+    # app.run(host="0.0.0.0",debug = True, ssl_context=context)  # 啟動伺服器
+    app.run(host="192.168.50.222", port=5000,debug = True, ssl_context=("server.crt", "server.key"))

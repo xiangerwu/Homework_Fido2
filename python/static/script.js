@@ -57,8 +57,9 @@ function showMessage(elementId, message) {
 // 回傳: response.json() - 後端回應的資料
 async function sendRequest(url, method, data) {
     const response = await fetch(
-        "https://localhost:5000" + url, {
+        "https://wzx_test.com:5000" + url, {
         method: method,
+        // credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
     });
@@ -164,7 +165,7 @@ async function verify_register() {
             {
                 publicKey: {
                     challenge: base64UrlToUint8Array(options.challenge),
-                    rpId: "localhost",
+                    rpId: "wzx_test.com",
                     userVerification: "required"
                 }
             }
