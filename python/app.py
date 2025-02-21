@@ -30,7 +30,7 @@ from webauthn.helpers.structs import (
 )
 
 app = Flask(__name__)
-CORS(app,origins="*", supports_credentials=True)
+CORS(app, origins="*", supports_credentials=True)
 
 sslify = SSLify(app)
 app.secret_key = os.urandom(24)  # 設定 Session 金鑰
@@ -56,6 +56,7 @@ def encode_bytes_to_base64(data):
         return [encode_bytes_to_base64(item) for item in data]
     return data
 
+
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
@@ -63,8 +64,6 @@ def add_cors_headers(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     return response
-
-
 
 
 # 首頁
@@ -113,7 +112,7 @@ def register():
         user_name=user.name,  # 用戶名稱
         user_id=user.id,  # 用戶 ID
         authenticator_selection=AuthenticatorSelectionCriteria(
-            authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  
+            authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,
             user_verification=UserVerificationRequirement.PREFERRED,
             resident_key=ResidentKeyRequirement.REQUIRED,
         ),
@@ -287,4 +286,9 @@ def clear():
 if __name__ == "__main__":
     # context = ("localhost.pem", "localhost-key.pem")  # SSL 憑證
     # app.run(host="0.0.0.0",debug = True, ssl_context=context)  # 啟動伺服器
-    app.run(host="192.168.50.222", port=5000,debug = True, ssl_context=("server.crt", "server.key"))
+    app.run(
+        host="192.168.50.222",
+        port=5000,
+        debug=True,
+        ssl_context=("../SSL_file/server.crt", "../SSL_file/server.crtserver.key"),
+    )
