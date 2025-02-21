@@ -9,8 +9,10 @@ Fido2/
 │ ├── app.py # Flask 後端 API 
 │ ├── static/ 
 │ │ └── script.js # WebAuthn 前端邏輯 
-│ ├── templates/ 
-│ │ └── index.html # 前端 HTML 
+│ └─ templates/ 
+│   └── index.html # 前端 HTML
+│
+├── SSL_file/ #金鑰相關檔案
 └──
 ```
 ### **🖥️ 伺服器運行**
@@ -93,7 +95,7 @@ Fido2/
 1. 安裝 **Python 依賴**
 
 ```python
-pip install flask flask-cors flask-sslify webauthn
+pip install -r requirement.txt
 ```
 2. 生成 SSL 憑證 (自簽)
 

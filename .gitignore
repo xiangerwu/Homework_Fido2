@@ -1,2 +1,6 @@
 venv/*
+<<<<<<< HEAD
 python/__pycache__/app.cpython-313.pyc
+=======
+python/__pycache__/app.cpython-313.pyc
+>>>>>>> a25b66ef69ad62858ae7724993552504d2f66900

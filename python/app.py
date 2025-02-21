@@ -286,4 +286,9 @@ def clear():
 if __name__ == "__main__":
     # context = ("localhost.pem", "localhost-key.pem")  # SSL 憑證
     # app.run(host="0.0.0.0",debug = True, ssl_context=context)  # 啟動伺服器
-    app.run(debug=True, ssl_context=context)  # 啟動伺服器
+    app.run(
+        host="192.168.50.222",
+        port=5000,
+        debug=True,
+        ssl_context=("../SSL_file/server.crt", "../SSL_file/server.key"),
+    )
