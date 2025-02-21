@@ -290,5 +290,6 @@ if __name__ == "__main__":
         host="192.168.50.222",
         port=5000,
         debug=True,
-        ssl_context=("../SSL_file/server.crt", "../SSL_file/server.crtserver.key"),
+        ssl_context=("../SSL_file/server.crt", "../SSL_file/server.key"),
+        
     )
