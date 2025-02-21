@@ -118,6 +118,6 @@ python app.py
      加入 
      
      ```
-     192.168.50.222 wzx_test.com
+     127.0.0.1 wzx_test.com
 
      ```
