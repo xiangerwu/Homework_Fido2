@@ -1,8 +1,14 @@
 # **Fido2 WebAuthn 專案**
 
 這是一個 **使用 Fido2 技術進行 WebAuthn 註冊和認證** 的專案，後端使用 **Flask**，前端透過 **JavaScript** 與 WebAuthn API 交互。  
+```
+分支說明:
+1.main  | 改失敗的分支，之後要合併
+2.proxmox | 架設在實驗室的版本，未分離版本，需改 host 
+3.localhost | 筆電用的 demo 版本
+4.Gpt4-o | 分割路由最新版
 
-
+```
 ### **🖥️ 伺服器運行**
 本專案運行於：  
 👉 **`https://wzx_test.com:5000`**
