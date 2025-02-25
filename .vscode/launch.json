@@ -5,23 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Flask",
+            "name": "Python 偵錯工具: Flask",
             "type": "debugpy",
             "request": "launch",
             "module": "flask",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}\\python\\fido-env\\Script\\python.exe",
-                "FLASK_APP": "python\\app.py",
-                "FLASK_DEBUG": "1"
+            "env": { 
+                "PYTHONPATH":"venv\\Scripts\\python.exe",
+                "FLASK_APP": "python\\run.py", 
+                "FLASK_DEBUG": "1" 
             },
-            "args": [
-                "run",
-                "--cert=adhoc",
-                // "--no-debugger",
-                // "--no-reload"
-            ],
+            "args": ["run", "--no-debugger", "--no-reload"],
             "jinja": true,
-            
-        }
+            "autoStartBrowser": false
+        },
+
     ]
 }
