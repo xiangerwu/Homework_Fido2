@@ -57,7 +57,7 @@ function showMessage(elementId, message) {
 // 回傳: response.json() - 後端回應的資料
 async function sendRequest(url, method, data) {
     const response = await fetch(
-        "https://wzx_test.com:5000" + url, {
+        "https://localhost:5000" + url, {
         method: method,
         // credentials: 'include',
         headers: { "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ async function register() {
 
         // 將憑證資料傳送到後端
         console.log("將憑證資料傳送到後端");
-        const result = await sendRequest("/store-credential", "POST", {
+        const result = await sendRequest("/register/store-credential", "POST", {
             username: username,
             credential: {
                 id: credential.id,
@@ -146,7 +146,7 @@ async function verify_register() {
 
     try {
         // 傳送使用者名稱到後端
-        const options = await sendRequest("/verify-register", "POST", { username });
+        const options = await sendRequest("/auth", "POST", { username });
 
         // 取得後端回應
         console.log("認證選項:", options.challenge);
@@ -165,7 +165,7 @@ async function verify_register() {
             {
                 publicKey: {
                     challenge: base64UrlToUint8Array(options.challenge),
-                    rpId: "wzx_test.com",
+                    rpId: "localhost",
                     userVerification: "required"
                 }
             }
@@ -177,7 +177,7 @@ async function verify_register() {
         console.log("3.將憑證傳給後端完成登入");
 
         // 將認證結果傳送給後端進行驗證
-        const verifyResult = await sendRequest("/verify-credential", "POST", {
+        const verifyResult = await sendRequest("/auth/verify-credential", "POST", {
             username: username,
             credential: {
                 id: credential.id,

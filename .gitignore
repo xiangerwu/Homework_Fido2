@@ -1,3 +1,6 @@
 venv/*
-python/__pycache__/*
 
+**/__pycache__/*
+
+SSL_file/server.crt
+SSL_file/server.key

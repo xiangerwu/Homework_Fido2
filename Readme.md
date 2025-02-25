@@ -2,19 +2,7 @@
 
 這是一個 **使用 Fido2 技術進行 WebAuthn 註冊和認證** 的專案，後端使用 **Flask**，前端透過 **JavaScript** 與 WebAuthn API 交互。  
 
-## **📂 目錄結構**
-```
-Fido2/ 
-├── python/ 
-│ ├── app.py # Flask 後端 API 
-│ ├── static/ 
-│ │ └── script.js # WebAuthn 前端邏輯 
-│ └─ templates/ 
-│   └── index.html # 前端 HTML
-│
-├── SSL_file/ #金鑰相關檔案
-└──
-```
+
 ### **🖥️ 伺服器運行**
 本專案運行於：  
 👉 **`https://wzx_test.com:5000`**
@@ -33,15 +21,15 @@ Fido2/
 ## **📜 主要 API 端點**
 本專案的 Flask 伺服器 (`app.py`) 提供以下 API 端點：
 
-| **路由 (Route)**        | **HTTP 方法** | **描述** |
-|------------------------|--------------|---------|
-| `/`                    | `GET`        | **首頁**，顯示歡迎詞及 WebAuthn 入口 |
-| `/main`                | `GET`        | **主要頁面**，前端 HTML |
-| `/register`            | `POST`       | **註冊 API**，生成 WebAuthn 註冊選項 |
-| `/store-credential`    | `POST`       | **存儲憑證**，驗證註冊回應並存儲憑證資料 |
-| `/verify-register`     | `POST`       | **驗證註冊**，生成新 challenge 並更新用戶資料 |
-| `/verify-credential`   | `POST`       | **驗證憑證**，驗證 WebAuthn 登入 |
-| `/clear`               | `POST`       | **清除全部用戶資料** |
+| **路由 (Route)**               | **HTTP 方法** | **描述** |
+|-------------------------------|--------------|---------|
+| `/`                           | `GET`        | **首頁**，顯示歡迎詞及 WebAuthn 入口 |
+| `/main`                       | `GET`        | **主要頁面**，前端 HTML |
+| `/register`                   | `POST`       | **註冊 API**，生成 WebAuthn 註冊選項 |
+| `/register/store-credential`  | `POST`       | **存儲憑證**，驗證註冊回應並存儲憑證資料 |
+| `/auth`                       | `POST`       | **驗證註冊**，生成新 challenge 並更新用戶資料 |
+| `/auth/verify-credential`     | `POST`       | **驗證憑證**，驗證 WebAuthn 登入 |
+| `/clear`                      | `POST`       | **清除全部用戶資料** |
 
 ---
 
