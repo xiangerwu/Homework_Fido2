@@ -9,6 +9,19 @@
 4.Gpt4-o | 分割路由最新版
 
 ```
+專案結構
+```
+├── routes/
+│   ├── register.py          # 處理 WebAuthn 註冊流程
+│   ├── auth.py              # 處理 WebAuthn 登入驗證
+├── templates/
+│   ├── index.html           # Web 前端測試頁面
+├── static/
+│   ├── script.js            # 處理 WebAuthn 前端邏輯
+├── app.py                   # Flask 伺服器主程式
+├── global_config.py         # 全域變數與系統配置
+└── README.md                # 本文件
+```
 ### **🖥️ 伺服器運行**
 本專案運行於：  
 👉 **`https://wzx_test.com:5000`**
@@ -38,53 +51,43 @@
 | `/clear`                      | `POST`       | **清除全部用戶資料** |
 
 ---
+功能說明
+1. 註冊 (/register)
 
-## **📌 主要功能說明**
-### **🔹 `register()` - 產生註冊選項**
-- 取得用戶名稱，產生 **隨機用戶 ID (`os.urandom(16)`)**
-- 使用 `generate_registration_options()` 產生 WebAuthn 註冊選項
-- 儲存 `challenge` 到 `session`
-- 回傳 **JSON 格式的 WebAuthn 註冊資訊**
+    流程：
+        用戶提供 username，後端產生 隨機 user_id。
+        後端建立 WebAuthn 註冊選項 並回傳至前端。
+        前端使用 FIDO2 安全裝置產生公私鑰，並回傳至後端。
+        伺服器驗證並儲存公鑰憑證。
 
-### **🔹 `store_credential()` - 存儲 WebAuthn 憑證**
-- 解析並驗證 **`clientDataJSON`**
-- 執行 `verify_registration_response()` 驗證 WebAuthn 註冊資料
-- **存儲公鑰 (`publicKey`) 與憑證 (`credential.id`)** 供日後登入驗證
+    API
+        POST /register/ → 產生註冊選項
+        POST /register/store-credential → 儲存用戶憑證
 
-### **🔹 `verify_register()` - 產生挑戰碼 (Challenge)**
-- 生成新的 `challenge`
-- 將其儲存到 `session`，更新 `users[username]`
-- **Base64 編碼** 確保 JSON 可序列化
-- 回傳 **WebAuthn 認證挑戰資訊**
+2. 登入 (/auth)
 
-### **🔹 `verify_credential()` - WebAuthn 驗證**
-- 取得用戶憑證 (`publicKey`) 與 **signCount**
-- 使用 `verify_authentication_response()` 驗證用戶身份
-- **更新 signCount，確保防重放攻擊 (Replay Attack)**
+    流程：
+        用戶提供 username，伺服器回傳 驗證挑戰碼。
+        前端透過 FIDO2 安全裝置簽署挑戰碼並傳送至後端驗證。
+        伺服器驗證簽名成功後，允許登入。
 
-### **🔹 `clear()` - 清除所有用戶資料**
-- 清空 `users` 字典，移除所有儲存的憑證與挑戰碼
+    API
+        POST /auth/ → 產生驗證挑戰碼
+        POST /auth/verify-credential → 驗證憑證並完成登入
 
----
+3. 清除用戶數據 (/clear)
 
-## **📜 前端 API (JavaScript)**
-### **📁 `/static/script.js`**
-**WebAuthn 主要前端邏輯**
-
-| **函式 (Function)**         | **用途** |
-|----------------------------|---------|
-| `base64UrlToUint8Array()`  | **Base64 解碼**，用於解析憑證 |
-| `uint8ArrayToBase64Url()`  | **Base64 編碼**，存儲憑證 |
-| `arrayBufferToBase64()`    | **ArrayBuffer 轉 Base64** |
-| `showMessage()`            | 顯示 UI 訊息 |
-| `sendRequest()`            | 發送 HTTP 請求 |
-| `register()`               | 用戶 WebAuthn 註冊 |
-| `verify_register()`        | 用戶 WebAuthn 認證 |
-| `clearData()`              | 清除憑證資訊 |
-
+    POST /clear → 清空所有用戶數據
 ---
 
 ## **🔧 其他資訊**
+
+其他說明
+
+    可將 users 轉為 資料庫 儲存
+    RP_ID (localhost) 可修改為正式網域
+    可擴展支援 U2F (USB Key) 或 TPM (可信模組)
+    
 ### **⚙️ 安裝與運行**
 1. 安裝 **Python 依賴**
 
