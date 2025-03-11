@@ -13,6 +13,8 @@
     ├── global_config.py
 │   └── db_manager.py  
 ├── requirement.txt
+├── Database
+│   └── fido2_user.db  
 ├── routes/
 │   ├── auth.py
 │   └── register.py

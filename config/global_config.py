@@ -17,7 +17,7 @@ g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 
 
 # SQLite Database file
-db_users = r"D:\\Project\\Database\\SQLite\\fido2_user.db"
+db_users = r"Database\\fido2_user.db"
 
 
 """ General Functions """
