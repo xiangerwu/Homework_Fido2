@@ -9,8 +9,10 @@
 ├── .vscode/
 │   └── launch.json
 ├── app.py
-├── global_config.py
-├── requirement
+├── config
+    ├── global_config.py
+│   └── db_manager.py  
+├── requirement.txt
 ├── routes/
 │   ├── auth.py
 │   └── register.py
@@ -36,12 +38,15 @@
 
 2. 設置 `.vscode/launch.json` 以便在 Visual Studio Code 中進行偵錯。
 
+3. 資料庫採用 SQLite ，之後再補
+
 ## 專案說明
 
 ### 主要檔案
 
 - `app.py`：主應用程式入口，設置 Flask 應用並引入路由。
 - `global_config.py`：全域變數與通用函式。
+- `db_manager.py` ：控制資料庫
 - `requirement`：所需的 Python 套件列表。
 
 ### 路由

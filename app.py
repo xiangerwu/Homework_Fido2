@@ -1,4 +1,5 @@
-from global_config import *
+from config.global_config import *
+from config.db_manager import db_operation
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from flask_sslify import SSLify
@@ -13,30 +14,22 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 from routes.register import register_bp
 from routes.auth import auth_bp
 
-
 app = Flask(__name__)
 # 設定 CORS 跨域請求
 CORS(app, ORIGIN="*", supports_credentials=True)
 # 設定 SSL
 sslify = SSLify(app)
 
-
 app.secret_key = g_secret_key
 
-####################
-# 引入拆分註冊路由區塊 #
-####################
-
+"""引入拆分註冊路由區塊"""
 # 用於註冊的路由
 app.register_blueprint(register_bp, url_prefix="/register")
 # 用於驗證的路由
 app.register_blueprint(auth_bp, url_prefix="/auth")
 
-####################
 
-##############
-# 註冊入由部份 #
-##############
+""" 註冊路由部份 """  # """
 
 
 # 首頁
@@ -55,12 +48,14 @@ def main():
 @app.route("/clear", methods=["POST"])
 def clear():
     users.clear()
+    db_operation(db_users, "delete", None, None)
     return jsonify({"status": "ok", "message": "用戶資料已清除"})
 
 
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()
 # 通常用於測試，當模塊被引入到其他模塊或程式時，app.run()不會運行
 if __name__ == "__main__":
+
     # 設定 IP 與 Port、啟用 debug 模式、並使用 SSL 憑證、金鑰
     app.run(
         host=g_IP,
