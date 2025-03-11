@@ -57,21 +57,21 @@ def verify_register():
     error, registration_data = chek_username(3, data)
     if error:
         return jsonify({"error": error}), 400
-    # 產生新的challenge
-    challenge = os.urandom(32)
-    # 儲存 challenge 到 session
-    session["state"] = {"challenge": challenge}
 
-    # 將資料打包為 AttestedCredentialData 格式
+    # 將資料打包為 fido2 的 AttestedCredentialData 格式
     registration_credential_data = AttestedCredentialData.create(
-        aaguid=bytes(registration_data.credential_data.aaguid),
-        credential_id=registration_data.credential_data.credential_id,
-        public_key=registration_data.credential_data.public_key,
+        aaguid=bytes(
+            registration_data.credential_data.aaguid
+        ),  # 設定 aagui: 驗證設備是否支援
+        credential_id=registration_data.credential_data.credential_id,  # 設定 credential_id: 憑證 ID
+        public_key=registration_data.credential_data.public_key,  # 設定 public_key: 公鑰
     )
-    # 開始註冊
+    # 開始驗證註冊資料
     options, state = app.server.authenticate_begin(
-        credentials=[registration_credential_data],
-        user_verification=UserVerificationRequirement.REQUIRED,
+        credentials=[
+            registration_credential_data
+        ],  # 設定 credentials = 上面的 registration_credential_data
+        user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
     )
     # 更新 session 中的 state
     session["state"] = state
@@ -96,6 +96,7 @@ def verify_credential():
         return jsonify({"error": error}), 400
 
     # expected_challenge 用來驗證 session 中的 challenge
+    # 這是前面步驟的 challenge
     expected_challenge = session.get("state", {}).get("challenge", None)
     if expected_challenge is None:
         return jsonify({"error": "session 的 challenge 不存在"}), 400
@@ -146,6 +147,10 @@ def verify_credential():
         """""" """""" """ 區塊結束 """ """""" """"""
 
         # 使用 authenticate_complete 進行完整驗證
+        # 這裡會驗證前端回傳的資料是否正確
+        # state         : /verify-register 註冊時的 state
+        # credentials   : 後端儲存的註冊資料
+        # response      : 前端回傳的資料
         auth_result = app.server.authenticate_complete(
             state=session["state"], credentials=Credentials, response=Response
         )
@@ -168,4 +173,5 @@ def verify_credential():
             }
         )
     except Exception as e:
+        print("error:", e)  # 顯示錯誤訊息
         return jsonify({"error": str(e)}), 400

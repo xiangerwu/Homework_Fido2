@@ -61,15 +61,16 @@ def register():
 
     # 使用 yubiko fido2 庫設定註冊選項
     options, state = app.server.register_begin(
-        PublicKeyCredentialUserEntity(
+        user=PublicKeyCredentialUserEntity(
             id=user_id,
             name=username,
             display_name=username,
         ),
-        user_verification=UserVerificationRequirement.PREFERRED,  # 驗證需求
-        authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  # 跨平台
-        resident_key_requirement=ResidentKeyRequirement.REQUIRED,  # 需要密鑰
+        user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
+        authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  # 驗證器平台
+        resident_key_requirement=ResidentKeyRequirement.REQUIRED,  # 密鑰設定
     )
+
     # print("options:", options)
 
     # 轉換 options 為 JSON 格式
