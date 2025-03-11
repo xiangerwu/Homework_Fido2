@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebAuthn 測試</title>
-    <script src="/static/script.js"></script>
+    <script type="module" src="/static/web_functions.js"></script>
+    <script type="module" src="/static/script.js"></script>
 </head>
 
 <body>
@@ -16,26 +17,25 @@
     <!-- 第一步: 向後端註冊使用者 -->
     <p> 將使用者 ID 傳給後端並取得回傳憑證後再儲存到瀏覽器 </p>
     <button onclick="register()">註冊 ID</button>
-    <h2>傳送使用者名稱後後端傳過來的 challenge</h2>
+    <h2>傳送使用者名稱之後，後端傳過來的 challenge</h2>
     <pre id="Register_Challenge"></pre>
+    <h2> 將後端回傳憑證後交給瀏覽器運算後的資料:</h2>
+    <pre id="Register_credentialInfo"></pre>
     <hr />
     <!-- 第二步: 向後端確認使用者存在後從瀏覽器取得憑證 -->
     <p>1.向後端確認使用者存在</p>
-    <p>2.後端回傳使用者資料再從瀏覽器取得憑證</p>
-    <p>3.將憑證傳給後端完成登入，</p>
+    <p>2.傳送使用者名稱之後，後端傳過來的 challenge</p>
+    <p>3.將瀏覽器憑證傳給後端完成登入，</p>
     <button onclick="verify_register()">用 ID 登入</button>
     <h2>傳送使用者名稱後後端傳過來的 challenge</h2>
     <pre id="Verify_Challenge"></pre>
+    <h2>後端憑證由瀏覽器認證結果</h2>
+    <pre id="verify-register_credentialInfo"></pre>
     <hr />
-
     <!-- 清除憑證資訊 -->
     <button onclick="clearData()">清除全部憑證資訊(All Users)</button>
     <hr />
-    <!-- 顯示憑證資訊 -->
-    <h2>向後端註冊後回傳給瀏覽器的憑證資料:</h2>
-    <pre id="Register_credentialInfo"></pre>
-    <h2>後端認證結果</h2>
-    <pre id="verify-register_credentialInfo"></pre>
+    
 </body>
 
 </html>

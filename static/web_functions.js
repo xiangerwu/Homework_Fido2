@@ -1,0 +1,86 @@
+/* 
+    函式名稱: base64UrlToUint8Array
+    作用:將 base64url 字串轉換為 Uint8Array
+    參數: base64Url (string) - base64url 字串
+    回傳: uint8Array (Uint8Array) - Uint8Array 格式
+*/
+function base64UrlToUint8Array(base64) {
+    const binary = atob(base64.replace(/_/g, '/').replace(/-/g, '+'));  //Base64 修正
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+/*
+    函式名稱: uint8ArrayToBase64Url
+    作用: 將 Uint8Array 轉換為 base64url 字串
+    參數: uint8Array (Uint8Array) - Uint8Array 格式
+    回傳: base64Url (string) - base64url 字串
+*/
+function uint8ArrayToBase64Url(uint8Array) {
+    const binaryString = String.fromCharCode(...uint8Array);
+    return btoa(binaryString)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+}
+/*
+    函式名稱: arrayBufferToBase64
+    作用: 將 ArrayBuffer 轉換為 base64 字串
+    參數: buffer (ArrayBuffer) - ArrayBuffer 格式
+    回傳: base64 (string) - base64 字串
+*/
+function arrayBufferToBase64(buffer) {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+/*
+    函式名稱: showMessage
+    作用: 顯示訊息在網頁上
+    參數: elementId (string) - HTML 元素的 ID
+    message (string) - 訊息
+*/
+function showMessage(elementId, message) {
+    document.getElementById(elementId).textContent = message;
+}
+
+/*
+    函式名稱: appendMessage
+    作用: 附加訊息在網頁上
+    參數: elementId (string) - HTML 元素的 ID
+    message (string) - 訊息
+*/
+function appendMessage(elementId, message) {
+    document.getElementById(elementId).textContent += message;
+}
+
+/*
+    函式名稱: NetworkError
+    作用: 網路錯誤處理
+    參數: message (string) - 錯誤訊息
+    回傳: location.reload() - 重新整理頁面
+*/
+function NetworkError(message) {
+    const error = message.toString();
+    if (error.includes("NetworkError")) {
+        alert("網路錯誤，請檢查網路連線！");
+        return true;
+    }
+    return false;
+}
+
+// 匯出函式，讓其他程式使用
+export {
+    base64UrlToUint8Array,
+    uint8ArrayToBase64Url,
+    arrayBufferToBase64,
+    showMessage,
+    appendMessage,
+    NetworkError,
+}
