@@ -1,5 +1,5 @@
 from config.global_config import *
-from config.db_manager import db_operation
+from config.db_manager import DatabaseManager
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from flask_sslify import SSLify
@@ -47,9 +47,14 @@ def main():
 # 清除測試用戶資料
 @app.route("/clear", methods=["POST"])
 def clear():
-    users.clear()
-    db_operation(db_users, "delete", None, None)
-    return jsonify({"status": "ok", "message": "用戶資料已清除"})
+    try:
+        # 清除資料庫
+        with DatabaseManager(db_users) as db:
+            db.delete_all()
+        return jsonify({"status": "ok", "message": "用戶資料已清除"})
+    except Exception as e:
+        # 如果發生錯誤，則返回錯誤訊息
+        return jsonify({"status": "error", "message": f"清除用戶資料失敗: {e}"})
 
 
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()

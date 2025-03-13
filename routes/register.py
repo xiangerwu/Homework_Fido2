@@ -22,7 +22,7 @@ from config.global_config import (
 )
 
 # 引入 db_manager 自定義模塊
-from config.db_manager import db_operation, chek_username
+from config.db_manager import DatabaseManager
 
 # 引入 app
 import app
@@ -51,10 +51,14 @@ register_bp = Blueprint("register", __name__)
 def register():
     # 取得用戶提交的 JSON 數據
     data = request.json
-    # 檢查資料是否有效，並取得用戶名稱或錯誤回傳
-    error, username = chek_username(1, data)
-    if error:
-        return jsonify({"error": error}), 400
+    # 取得用戶名稱
+    username = data.get("username")
+    # 確認用戶是否存在
+    with DatabaseManager(db_users) as db:
+        chek_username = db.get_user_name(username)
+
+    if chek_username:
+        return jsonify({"error": "用戶已存在"}), 400
 
     # 產生隨機的用戶 ID，用於後續產生金鑰
     user_id = os.urandom(16)
@@ -71,7 +75,7 @@ def register():
             display_name=username,
         ),
         user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
-        authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  # 驗證器平台
+        # authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,  # 驗證器平台
         resident_key_requirement=ResidentKeyRequirement.REQUIRED,  # 密鑰設定
     )
 
@@ -85,14 +89,6 @@ def register():
     session["state"] = state
     # print("state:", state)
 
-    # 將用戶名稱與用戶 ID 寫入資料庫
-    Add_User = db_operation(
-        db_users,
-        "insert",
-        "INSERT INTO Users (User_name, User_id) VALUES (?, ?)",
-        (username, user_id),
-    )
-
     # print("Add user result:", Add_User)
 
     # 回傳給前端 JSON 格式的 options，代表後端收到了註冊請求
@@ -103,16 +99,21 @@ def register():
 # 作用: 存儲 WebAuthn 憑證
 @register_bp.route("/store-credential", methods=["POST"])
 def store_credential():
-
     # 取得用戶提交的 JSON
     data = request.json
-    # 檢查資料是否有效，並取得用戶名稱與憑證資料(前端)，或錯誤回傳
-    error, username, clinet_credential_data = chek_username(2, data)
-    if error:
-        return jsonify({"error": error}), 400
-
-    # 開始存儲憑證
+    username = data.get("username")
+    # 開始存儲憑證流程
     try:
+        # 檢查用戶是否存在
+        if not username:
+            return jsonify({"error": "沒有用戶帶入用戶名稱"}), 400
+
+        # 檢查資料是否有效，並取得憑證資料(前端)，或錯誤回傳
+        clinet_credential_data = data.get("credential")
+        if not clinet_credential_data:
+            return jsonify({"error": "請提供有效的 JSON 數據"}), 400
+
+        # client_response 是前端回傳的資料
         client_response = clinet_credential_data["response"]
         # 轉換 clinet_credential_data 中相關的資料，將 base64url 字串轉為 bytes 後轉換成 fido2 的物件
         # 這裡的 CollectedClientData 是 fido2 的 CollectedClientData 物件
@@ -133,12 +134,8 @@ def store_credential():
         )
         #
         # 將 server_credential_data 存進資料庫
-        Add_Credential = db_operation(
-            db_users,
-            "insert",
-            "INSERT INTO Credential (User_name, Credential) VALUES (?, ?)",
-            (username, server_credential_data),
-        )
+        with DatabaseManager(db_users) as db:
+            Add_Credential = db.insert_user(username, server_credential_data)
         # 回傳成功訊息
         return jsonify(
             {

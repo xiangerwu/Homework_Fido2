@@ -24,7 +24,7 @@ from config.global_config import (
 )
 
 # 引入 db_manager 自定義模塊
-from config.db_manager import db_operation, chek_username
+from config.db_manager import DatabaseManager
 
 # 引入 app
 import app
@@ -39,6 +39,8 @@ from fido2.webauthn import (
     webauthn_json_mapping,
 )
 from fido2.server import Fido2Server
+
+from user_agents import parse
 
 # 啟用 WebAuthn JSON 映射
 webauthn_json_mapping.enabled = True
@@ -56,39 +58,48 @@ auth_bp = Blueprint("auth", __name__)
 def verify_register():
     # 取得用戶提交的 JSON 數據
     data = request.json
-    # 檢查資料是否有效，並取得使用者註冊資料(後端)或錯誤回傳
-    error, server_credential_data = chek_username(3, data)
-    if error:
-        return jsonify({"error": error}), 400
+    username = data.get("username")
+    if not username:
+        return jsonify({"error": "請提供使用者名稱"}), 400
+    try:
+        # 檢查資料是否有效，並取得使用者註冊資料(後端)或錯誤回傳
+        with DatabaseManager(db_users) as db:
+            server_credential_data = db.get_credential(data.get("username"))[0]
+        if not server_credential_data:
+            return jsonify({"error": "用戶註冊憑證不存在"}), 400
 
-    # 這時 server_credential_data 是後端儲存的註冊資料並且是 bytes 類型
-    # 這裡將料轉換為 fido2 的 Authenticator 物件
-    restored_server_credential_data = AuthenticatorData(server_credential_data)
-    # 提取 restored_server_credential_data 中的 credential_data
-    Credential_data = restored_server_credential_data.credential_data
-    # 將資料打包為 fido2 的 AttestedCredentialData 格式
-    AttestedCredential = AttestedCredentialData.create(
-        aaguid=bytes(Credential_data.aaguid),  # 設定 aagui: 驗證設備是否支援
-        credential_id=Credential_data.credential_id,  # 設定 credential_id: 憑證 ID
-        public_key=Credential_data.public_key,  # 設定 public_key: 公鑰
-    )
+        # 這時 server_credential_data 是後端儲存的註冊資料並且是 bytes 類型
+        # 這裡將料轉換為 fido2 的 Authenticator 物件
+        restored_server_credential_data = AuthenticatorData(server_credential_data)
+        # 提取 restored_server_credential_data 中的 credential_data
+        Credential_data = restored_server_credential_data.credential_data
+        # 將資料打包為 fido2 的 AttestedCredentialData 格式
+        AttestedCredential = AttestedCredentialData.create(
+            aaguid=bytes(Credential_data.aaguid),  # 設定 aagui: 驗證設備是否支援
+            credential_id=Credential_data.credential_id,  # 設定 credential_id: 憑證 ID
+            public_key=Credential_data.public_key,  # 設定 public_key: 公鑰
+        )
 
-    # 使用 yubiko fido2 套件開始驗證
-    # 這裡設定了驗證選項，並且設定了驗證設備的要求
-    options, state = app.server.authenticate_begin(
-        credentials=[AttestedCredential],  # 設定 credentials: 後端儲存的註冊資料
-        user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
-    )
+        # 使用 yubiko fido2 套件開始驗證
+        # 這裡設定了驗證選項，並且設定了驗證設備的要求
+        options, state = app.server.authenticate_begin(
+            credentials=[AttestedCredential],  # 設定 credentials: 後端儲存的註冊資料
+            user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
+            
+        )
 
-    # 更新 session 中的 state
-    session["state"] = state
-    # 顯示 state
-    # print("Auth state:", state)
-    # 轉換 options 為 JSON 格式
-    options_dict = dict(options)
-    options_json = encode_bytes_to_base64(options_dict)
-    # 回傳 options
-    return jsonify(options_json)
+        # 更新 session 中的 state
+        session["state"] = state
+        # 顯示 state
+        # print("Auth state:", state)
+        # 轉換 options 為 JSON 格式
+        options_dict = dict(options)
+        options_json = encode_bytes_to_base64(options_dict)
+        # 回傳 options
+        return jsonify(options_json)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 # 網頁路徑 /verify-credential
@@ -98,25 +109,29 @@ def verify_credential():
 
     # 取得用戶提交的 JSON 數據
     data = request.json
-    # 檢查資料是否有效，並取得註冊資料(前端)或錯誤回傳
-    error, username, client_credential_data = chek_username(4, data)
-    if error:
-        return jsonify({"error": error}), 400
-
-    # expected_challenge 用來驗證 session 中的 challenge
-    # 這是前面步驟的 challenge
-    expected_challenge = session.get("state", {}).get("challenge", None)
-    if expected_challenge is None:
-        return jsonify({"error": "session 的 challenge 不存在"}), 400
-
+    username = data.get("username")
+    if not username:
+        return jsonify({"error": "請提供使用者名稱"}), 400
     # 驗證憑證流程
     try:
+        # 檢查資料是否有效，並取得註冊資料(前端)或錯誤回傳
+        client_credential_data = data.get("credential")
+        if not client_credential_data:
+            return jsonify({"error": "錯誤的 credential"}), 400
+
+        # expected_challenge 用來驗證 session 中的 challenge
+        # 這是前面步驟的 challenge
+        expected_challenge = session.get("state", {}).get("challenge", None)
+        if expected_challenge is None:
+            return jsonify({"error": "session 的 challenge 不存在"}), 400
 
         # 從後端資料庫中取得 Credential 資料
         # 這裡的 server_credential_data 是後端儲存的註冊資料，並且是 bytes
-        server_credential_data = db_operation(
-            db_users, "query_credential", None, username
-        )
+        with DatabaseManager(db_users) as db:
+            server_credential_data = db.get_credential(username)[0]
+        if not server_credential_data:
+            return jsonify({"error": "資料庫中的用戶憑證不存在"}), 400
+
         # 這裡將 bytes 資料轉換為 Authenticator
         restored_server_credential_data = AuthenticatorData(server_credential_data)
         # 提取 restored_server_credential_data 中的 credential_data
@@ -124,7 +139,8 @@ def verify_credential():
         #
         # 使用 client_response 縮短後續程式碼
         client_response = client_credential_data["response"]
-
+        # 紀錄驗證器資訊
+        authenticator_type = client_credential_data["type"]
         """!!! 將後面 authenticate_complete 要用的變數先拉出來整理 !!!"""
 
         """ credentials """
@@ -168,8 +184,9 @@ def verify_credential():
             response=Client_Response,  # 前端回傳的 client_response
         )
 
-        # 更新資料庫中的 Credential 資料
-        db_operation(db_users, "update", None, (username, auth_result)),
+        # 成功驗證後，記錄登入資訊到 Users_Log
+        # 分析 request 中的資料
+        User_Log = Login_Log(username,request,authenticator_type)
 
         # 回傳成功訊息
         return jsonify(
@@ -182,3 +199,29 @@ def verify_credential():
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息
         return jsonify({"error": str(e)}), 400
+
+
+
+def Login_Log(username,request,authenticator_type):
+    try:
+        user_agent= parse(request.headers.get("User-Agent"))
+        user_ip = request.remote_addr
+        user_device = user_agent.device.family
+        # 判斷是不是手機
+        device_types = {
+            "PC": user_agent.is_pc,
+            "Mobile": user_agent.is_mobile,
+            "Tablet": user_agent.is_tablet
+        }
+        for key, value in device_types.items():
+            if value:
+                user_device = key
+        
+        user_os = user_agent.os.family
+        user_browser = user_agent.browser.family
+        with DatabaseManager(db_users) as db:
+            db.log_user_login(username, authenticator_type, user_ip, user_os, user_device, user_browser)
+        # 這裡應該要寫入資料庫
+        return None
+    except Exception as e:
+        raise Exception("Log Error")
