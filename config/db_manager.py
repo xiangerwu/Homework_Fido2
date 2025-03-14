@@ -89,7 +89,7 @@ class DatabaseManager:
             return self.execute_query(query, (credential, username), commit=True)
         except Exception as e:
             raise Exception(f"Error updating credential: {e}")
-
+    # 記錄用戶登入，無回傳
     def log_user_login(self,username, authenticator, ip, os, device, browser):
         try:
             query = "INSERT INTO Users_Log (User_name, authenticator, IP, OS, Device, browser, login_time) VALUES (?, ?, ?, ?, ?, ?, DATETIME('now', 'localtime'));"
@@ -97,12 +97,29 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error logging user login: {e}")
 
+    # 查詢所有用戶
+    def get_all_users(self):
+        try:
+            query = "SELECT * FROM Users_List;"  # 查詢所有用戶
+            return self.execute_query(query, fetchall=True)
+        except Exception as e:
+            raise Exception(f"Error getting all users: {e}")
+
+    # 查詢用戶登入紀錄
+    def get_user_log(self, username):
+        try:
+            query = "SELECT * FROM Users_Log WHERE User_name = ?;"  # 查詢用戶登入紀錄
+            return self.execute_query(query, (username,), fetchall=True)
+        except Exception as e:
+            raise Exception(f"Error getting user log: {e}")
+    # 刪除用戶，無回傳
     def delete_user(self, username):
         try:
             query = "DELETE FROM Users_List WHERE User_name = ?;"  # 刪除用戶
             return self.execute_query(query, (username,), commit=True)
         except Exception as e:
             raise Exception(f"Error deleting user: {e}")
+
 
     # 刪除所有資料，無回傳
     def delete_all(self):

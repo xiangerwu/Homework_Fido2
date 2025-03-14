@@ -185,7 +185,6 @@ def verify_credential():
         )
 
         # 成功驗證後，記錄登入資訊到 Users_Log
-        # 分析 request 中的資料
         User_Log = Login_Log(username,request,authenticator_type)
 
         # 回傳成功訊息
@@ -200,8 +199,7 @@ def verify_credential():
         print("error:", e)  # 顯示錯誤訊息
         return jsonify({"error": str(e)}), 400
 
-
-
+# 記錄用戶登入紀錄
 def Login_Log(username,request,authenticator_type):
     try:
         user_agent= parse(request.headers.get("User-Agent"))
@@ -221,7 +219,30 @@ def Login_Log(username,request,authenticator_type):
         user_browser = user_agent.browser.family
         with DatabaseManager(db_users) as db:
             db.log_user_login(username, authenticator_type, user_ip, user_os, user_device, user_browser)
-        # 這裡應該要寫入資料庫
+        
         return None
     except Exception as e:
         raise Exception("Log Error")
+
+# 獲取用戶登入紀錄
+@auth_bp.route("/user-log", methods=["POST"])
+def get_user_login_log():
+    username = request.json.get("username")
+    user_record = []
+    try:
+        with DatabaseManager(db_users) as db:
+            user_log = db.get_user_log(username)
+            for record in user_log:
+                user_record.append({
+                    "username": record[1],
+                    "authenticator": record[2],
+                    "ip": record[3],
+                    "os": record[4],
+                    "device": record[5],
+                    "browser": record[6],
+                    "loginTime": record[7]
+                })
+
+        return user_record
+    except Exception as e:
+        raise Exception("Get User Log Error")

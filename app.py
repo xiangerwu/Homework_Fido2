@@ -14,7 +14,7 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 from routes.register import register_bp
 from routes.auth import auth_bp
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
 # 設定 CORS 跨域請求
 CORS(app, ORIGIN="*", supports_credentials=True)
 # 設定 SSL
@@ -43,6 +43,15 @@ def home():
 def main():
     return render_template("index.html")
 
+# 取得所有用戶資料
+@app.route("/users", methods=["GET"])
+def users():
+    user_list = []
+    with DatabaseManager(db_users) as db:
+        users = db.get_all_users()
+        for user in users:
+            user_list.append({"id": user[0], "username": user[1],"registeredAt": user[3]})
+    return jsonify(user_list)
 
 # 清除測試用戶資料
 @app.route("/clear", methods=["POST"])

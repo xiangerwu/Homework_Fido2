@@ -1,0 +1,9 @@
+.col-md-6-right {
+    width: 60%; /* 讓右側擴大 */
+    min-width: 900px; /* 避免過窄 */
+}
+
+.container-fluid {
+    padding-left: 150px;
+    padding-right: 50px;
+}
