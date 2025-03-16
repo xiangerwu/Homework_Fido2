@@ -43,6 +43,7 @@ def home():
 def main():
     return render_template("index.html")
 
+
 # 取得所有用戶資料
 @app.route("/users", methods=["GET"])
 def users():
@@ -50,8 +51,11 @@ def users():
     with DatabaseManager(db_users) as db:
         users = db.get_all_users()
         for user in users:
-            user_list.append({"id": user[0], "username": user[1],"registeredAt": user[3]})
+            user_list.append(
+                {"id": user[0], "username": user[1], "registeredAt": user[3]}
+            )
     return jsonify(user_list)
+
 
 # 清除測試用戶資料
 @app.route("/clear", methods=["POST"])
@@ -75,5 +79,5 @@ if __name__ == "__main__":
         host=g_IP,
         port=g_Port,
         debug=True,
-        ssl_context=(g_SSL_crt, g_SSL_key),
+        # ssl_context=(g_SSL_crt, g_SSL_key), 託管在 Render  不需要 SSL
     )
