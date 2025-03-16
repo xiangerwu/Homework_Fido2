@@ -16,7 +16,10 @@ from routes.auth import auth_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 # 設定 CORS 跨域請求
-CORS(app, ORIGIN="*", supports_credentials=True)
+
+CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
+# CORS(app, ORIGIN="*", supports_credentials=True)
+
 # 設定 SSL
 sslify = SSLify(app)
 

@@ -4,12 +4,12 @@ import os
 """ Global Variables """
 
 # 設定 RP 相關資訊
-RP_ID = "localhost"  # 這裡的 RP_ID 要改成你的網站域名
-RP_NAME = "My WebAuthn App"  # 這裡的 RP_NAME 要改成你的網站名稱
-ORIGIN = "https://localhost:5000"  # 這裡的 ORIGIN 要改成你的網站域名
+RP_ID = "fido2.akitawan.moe"  # 改成你的正式域名
+RP_NAME = "My WebAuthn App"  # 可保持不變，或改成你的應用名稱
+ORIGIN = "https://fido2.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
 # 設定常用變數
-g_IP = "127.0.0.1"  # 這裡的 IP 要改成你的 IP
-g_Port = 5000  # 這裡的 Port 要改成你的 Port
+g_IP = "0.0.0.0"  # Flask 在 Render 上應該綁定所有 IP
+g_Port = int(os.getenv("PORT", 5000))  # Render 會自動分配 PORT
 g_SSL_crt = r"SSL_file\\server.crt"  # 這裡的 SSL_crt 要改成你的 SSL 憑證
 g_SSL_key = r"SSL_file\\server.key"  # 這裡的 SSL_key 要改成你的 SSL 金鑰
 

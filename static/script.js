@@ -262,7 +262,7 @@ async function updateUserList() {
 
     try {
         // 發送 GET 請求到後端 API
-        const response = await fetch("https://localhost:5000/users");
+        const response = await fetch("https://fido2.akitawan.moe");
 
 
         // 確保回應成功
