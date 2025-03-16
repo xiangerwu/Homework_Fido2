@@ -14,30 +14,24 @@ import {
 
 } from "./web_functions.js";
 
+// 將函式註冊到 window 物件上
+window.register = register;
+window.verify_register = verify_register;
+window.clearData = clearData;
+window.toggleCollapse = toggleCollapse;
 
-document.addEventListener("DOMContentLoaded", function () {
-    // 取得所有折疊按鈕
-    let toggleBtns = document.querySelectorAll(".toggle-btn");
+async function toggleCollapse(id, btn) {
+    const section = document.getElementById(id);
+    section.classList.toggle("show");
 
-    toggleBtns.forEach(function (toggleBtn) {
-        let targetId = toggleBtn.getAttribute("data-bs-target"); // 取得對應的區塊 ID
-        let collapseElement = document.querySelector(targetId);
+    // 切換按鈕方向
+    if (section.classList.contains("show")) {
+        btn.innerHTML = "▼";
+    } else {
+        btn.innerHTML = "▶";
+    }
+}
 
-        if (collapseElement) {
-            let collapseInstance = new bootstrap.Collapse(collapseElement, { toggle: false });
-
-            toggleBtn.addEventListener("click", function () {
-                if (collapseElement.classList.contains("show")) {
-                    collapseInstance.hide();
-                    toggleBtn.innerHTML = "▲";
-                } else {
-                    collapseInstance.show();
-                    toggleBtn.innerHTML = "▼";
-                }
-            });
-        }
-    });
-});
 
 
 // 函式名稱: sendRequest
@@ -254,10 +248,6 @@ export {
 }
 
 
-// 將函式註冊到 window 物件上
-window.register = register;
-window.verify_register = verify_register;
-window.clearData = clearData;
 
 
 
@@ -314,8 +304,6 @@ async function showLoginHistory(username, userdata) {
     loginHistory.innerHTML = "";
 
     try {
-
-
         // 檢查是否有紀錄
         if (userdata.length === 0) {
             loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-warning">無登入紀錄</td></tr>`;
@@ -330,6 +318,7 @@ async function showLoginHistory(username, userdata) {
                         <td>${log.device}</td>
                         <td>${log.browser}</td>
                         <td>${log.loginTime}</td>
+                        <td>${log.success ? "❌" : "✅"}</td>
                     </tr>
                 `;
                 loginHistory.innerHTML += row;

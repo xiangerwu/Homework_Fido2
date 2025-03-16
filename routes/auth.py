@@ -85,7 +85,6 @@ def verify_register():
         options, state = app.server.authenticate_begin(
             credentials=[AttestedCredential],  # 設定 credentials: 後端儲存的註冊資料
             user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
-            
         )
 
         # 更新 session 中的 state
@@ -185,7 +184,7 @@ def verify_credential():
         )
 
         # 成功驗證後，記錄登入資訊到 Users_Log
-        User_Log = Login_Log(username,request,authenticator_type)
+        User_Log = Login_Log(username, request, authenticator_type, 1)
 
         # 回傳成功訊息
         return jsonify(
@@ -197,32 +196,43 @@ def verify_credential():
         )
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息
+        User_Log = Login_Log(username, request, authenticator_type, 0)
         return jsonify({"error": str(e)}), 400
 
+
 # 記錄用戶登入紀錄
-def Login_Log(username,request,authenticator_type):
+def Login_Log(username, request, authenticator_type, status):
     try:
-        user_agent= parse(request.headers.get("User-Agent"))
+        user_agent = parse(request.headers.get("User-Agent"))
         user_ip = request.remote_addr
         user_device = user_agent.device.family
         # 判斷是不是手機
         device_types = {
             "PC": user_agent.is_pc,
             "Mobile": user_agent.is_mobile,
-            "Tablet": user_agent.is_tablet
+            "Tablet": user_agent.is_tablet,
         }
         for key, value in device_types.items():
             if value:
                 user_device = key
-        
+
         user_os = user_agent.os.family
         user_browser = user_agent.browser.family
         with DatabaseManager(db_users) as db:
-            db.log_user_login(username, authenticator_type, user_ip, user_os, user_device, user_browser)
-        
+            db.log_user_login(
+                username,
+                authenticator_type,
+                user_ip,
+                user_os,
+                user_device,
+                user_browser,
+                user_status=status,
+            )
+
         return None
     except Exception as e:
         raise Exception("Log Error")
+
 
 # 獲取用戶登入紀錄
 @auth_bp.route("/user-log", methods=["POST"])
@@ -233,15 +243,18 @@ def get_user_login_log():
         with DatabaseManager(db_users) as db:
             user_log = db.get_user_log(username)
             for record in user_log:
-                user_record.append({
-                    "username": record[1],
-                    "authenticator": record[2],
-                    "ip": record[3],
-                    "os": record[4],
-                    "device": record[5],
-                    "browser": record[6],
-                    "loginTime": record[7]
-                })
+                user_record.append(
+                    {
+                        "username": record[1],
+                        "authenticator": record[2],
+                        "ip": record[3],
+                        "os": record[4],
+                        "device": record[5],
+                        "browser": record[6],
+                        "loginTime": record[7],
+                        "loginStatus": record[8],
+                    }
+                )
 
         return user_record
     except Exception as e:

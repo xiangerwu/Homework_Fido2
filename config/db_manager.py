@@ -19,7 +19,6 @@ import sqlite3
 # 7. delete_all() 用來刪除所有資料，無回傳
 
 
-
 # 意思是使用 db_users 這個資料庫檔案來連接資料庫
 class DatabaseManager:
     # 初始化設定資料庫檔案
@@ -89,11 +88,18 @@ class DatabaseManager:
             return self.execute_query(query, (credential, username), commit=True)
         except Exception as e:
             raise Exception(f"Error updating credential: {e}")
+
     # 記錄用戶登入，無回傳
-    def log_user_login(self,username, authenticator, ip, os, device, browser):
+    def log_user_login(
+        self, username, authenticator, ip, os, device, browser, user_status
+    ):
         try:
-            query = "INSERT INTO Users_Log (User_name, authenticator, IP, OS, Device, browser, login_time) VALUES (?, ?, ?, ?, ?, ?, DATETIME('now', 'localtime'));"
-            return self.execute_query(query, (username, authenticator, ip, os, device, browser), commit=True)
+            query = "INSERT INTO Users_Log (User_name, authenticator, IP, OS, Device, browser, login_time ,login_status) VALUES (?, ?, ?, ?, ?, ?,  DATETIME('now', 'localtime'), ?);"
+            return self.execute_query(
+                query,
+                (username, authenticator, ip, os, device, browser, user_status),
+                commit=True,
+            )
         except Exception as e:
             raise Exception(f"Error logging user login: {e}")
 
@@ -108,10 +114,11 @@ class DatabaseManager:
     # 查詢用戶登入紀錄
     def get_user_log(self, username):
         try:
-            query = "SELECT * FROM Users_Log WHERE User_name = ?;"  # 查詢用戶登入紀錄
+            query = "SELECT * FROM Users_Log WHERE User_name = ?  ORDER BY login_time DESC;"  # 查詢用戶登入紀錄
             return self.execute_query(query, (username,), fetchall=True)
         except Exception as e:
             raise Exception(f"Error getting user log: {e}")
+
     # 刪除用戶，無回傳
     def delete_user(self, username):
         try:
@@ -119,7 +126,6 @@ class DatabaseManager:
             return self.execute_query(query, (username,), commit=True)
         except Exception as e:
             raise Exception(f"Error deleting user: {e}")
-
 
     # 刪除所有資料，無回傳
     def delete_all(self):

@@ -1,9 +1,67 @@
+.row {
+    display: flex;
+    align-items: flex-start; /* 讓 `row` 的子元素不受展開影響 */
+   
+}
 .col-md-6-right {
-    width: 60%; /* 讓右側擴大 */
-    min-width: 900px; /* 避免過窄 */
+    width: 120%; /*讓右側擴大 */ 
+   
 }
 
+
 .container-fluid {
-    padding-left: 150px;
-    padding-right: 50px;
+    padding-left: 380px;
+    padding-right:50px;
+}
+
+/* 讓前兩欄有懸浮感 + 毛玻璃 */
+.glass-effect {
+    background: rgba(39, 39, 39, 0.308);
+    /* 半透明白色背景 */
+    backdrop-filter: blur(10px);
+    /* 毛玻璃效果 */
+    border-radius: 15px;
+    /* 圓角 */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    /* 懸浮陰影 */
+}
+
+body {
+    background-image: url("https://picsum.photos/1920/1080");
+    background-size: cover;
+    /* 讓圖片完整覆蓋畫面 */
+    background-position: center center;
+    /* 讓圖片水平 & 垂直置中 */
+    background-repeat: no-repeat;
+    /* 防止圖片重複 */
+    background-attachment: fixed;
+    /* 讓背景固定不隨滾動變化 */
+}
+
+.custom-collapse {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+
+}
+.custom-collapse.show {
+    max-height: 1000px; /* 設定較大的值，確保可以展開 */
+}
+
+/* 讓左右兩欄之間有間距 */
+.container-fluid .row {
+    gap: 30px; /* 讓左右欄分開，避免太擠 */
+}
+
+
+/* 調整表格字型大小 */
+.table-style {
+    font-size: 16px; /* 設定適當的字型大小 */
+}
+
+/* 讓表格內的文字水平 & 垂直置中 */
+.table-style th,
+.table-style td {
+    text-align: center; /* 水平置中 */
+    vertical-align: middle; /* 垂直置中 */
 }

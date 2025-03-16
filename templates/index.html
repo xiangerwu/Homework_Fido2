@@ -33,40 +33,42 @@
 
             <hr class="bg-light" />
         </div>
-        <div class="container-fluid mt-4">
+        <div class="container-fluid mt-4 justify-content-center">
             <!-- 內文 -->
             <div class="row">
                 <!-- 左側主要內容區塊 -->
-                <div class="col-md-5">
+                
+                <div class="col-md-4 glass-effect">
                     <!-- 使用者名稱輸入區 -->
                     <div class="d-flex align-items-center mb-3">
-                        <label for="username" class="form-label me-2 fs-3"
+                        <label for="username" class="form-label me-2 fs-5 "
                             >使用者名稱:</label
                         >
                         <input
                             type="text"
                             id="username"
-                            class="form-control bg-secondary text-light w-50"
+                            class="form-control bg-secondary text-light w-50 fs-5"
                         />
                     </div>
 
                     <hr />
 
                     <!-- 註冊使用者區塊 -->
-                    <div>
+                    <div >
                         <div class="d-flex align-items-center">
                             <!-- 折疊按鈕 -->
+
                             <button
                                 class="btn btn-outline-light me-3 toggle-btn"
-                                data-bs-target="#registerSection"
+                                onclick="toggleCollapse('registerSection', this)"
                             >
-                                ▲
+                                ▶
                             </button>
                             <h2 class="flex-grow-1 mb-0">註冊使用者</h2>
                         </div>
 
                         <!-- 註冊區塊 (可折疊) -->
-                        <div id="registerSection" class="collapse mt-3">
+                        <div id="registerSection" class="custom-collapse mt-3">
                             <!-- 註冊按鈕 -->
                             <button
                                 class="btn btn-primary w-100 mb-3"
@@ -108,17 +110,18 @@
                     <div>
                         <div class="d-flex align-items-center">
                             <!-- 折疊按鈕 -->
-                            <button
+                             <button
                                 class="btn btn-outline-light me-3 toggle-btn"
-                                data-bs-target="#AuthenSection"
+                                onclick="toggleCollapse('AuthenSection', this)"
                             >
-                                ▲
+                                ▶
                             </button>
+                            
                             <h2 class="flex-grow-1 mb-0">使用者驗證/登入</h2>
                         </div>
 
                         <!-- 驗證區塊 (可折疊) -->
-                        <div id="AuthenSection" class="collapse mt-3">
+                        <div id="AuthenSection" class="custom-collapse mt-3">
                             <!-- 登入按鈕 -->
                             <button
                                 class="btn btn-success w-100 mb-3"
@@ -160,14 +163,16 @@
                     </button>
                 </div>
 
-                <!-- 右側預留空間 -->
-                <div class="col-md-7 d-flex flex-column align-items-end">
-                    <h2 class="w-75 text-center">目前使用者名單</h2>
+                <!-- 右側空間 -->
+                <div
+                    class="col-md-6 glass-effect d-flex flex-column align-items-center "
+                >
+                    <h2 class="w-75 text-center ">目前使用者名單</h2>
 
                     <!-- 使用者表格 -->
                     <div class="table-responsive w-75">
                         <table
-                            class="table table-dark table-striped table-bordered"
+                            class="table table-dark table-striped table-bordered  table-style"
                         >
                             <thead>
                                 <tr>
@@ -183,22 +188,23 @@
                     </div>
                     <hr class="w-75" />
                     <!-- 使用者登入紀錄區塊 (預設隱藏) -->
-                    <div id="loginHistorySection" class="w-75 d-none">
+                    <div id="loginHistorySection" class="w-100 d-none">
                         <h2 class="text-center" id="loginHistoryTitle">
                             {username} 的登入紀錄
                         </h2>
                         <div class="table-responsive">
                             <table
-                                class="table table-dark table-striped table-bordered"
+                                class="table table-dark table-striped table-bordered table-style"
                             >
                                 <thead>
                                     <tr>
-                                        <th>Authenticator</th>
+                                        <th>登入結果</th>
                                         <th>IP</th>
                                         <th>OS</th>
                                         <th>設備</th>
                                         <th>瀏覽器</th>
                                         <th>登入時間</th>
+                                        <th>Authenticator</th>
                                     </tr>
                                 </thead>
                                 <tbody id="loginHistory">
