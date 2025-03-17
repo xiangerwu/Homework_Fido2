@@ -29,15 +29,6 @@ app.secret_key = g_secret_key
 """ 註冊路由部份 """
 
 
-# 強制重定向到 HTTPS
-@app.before_request
-def enforce_https():
-    # 檢查是否來自 HTTP，使用 X-Forwarded-Proto 標頭
-    if request.headers.get("X-Forwarded-Proto") == "http":
-        # 強制重定向到 HTTPS
-        return redirect(request.url.replace("http://", "https://", 1), code=301)
-
-
 # 首頁
 @app.route("/")
 def home():

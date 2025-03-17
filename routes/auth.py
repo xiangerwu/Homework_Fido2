@@ -53,7 +53,7 @@ auth_bp = Blueprint("auth", __name__)
 
 # 網頁路徑 /verify-register
 # 作用: 驗證 WebAuthn 註冊資料
-@auth_bp.route("/", methods=["POST"])
+@auth_bp.route("/", methods=["POST"], strict_slashes=False)
 def verify_register():
     # 取得用戶提交的 JSON 數據
     data = request.json
@@ -105,7 +105,7 @@ def verify_register():
 
 # 網頁路徑 /verify-credential
 # 作用: 驗證 WebAuthn 憑證回應
-@auth_bp.route("/verify-credential", methods=["POST"])
+@auth_bp.route("/verify-credential", methods=["POST"], strict_slashes=False)
 def verify_credential():
 
     # 取得用戶提交的 JSON 數據
