@@ -147,4 +147,13 @@ def store_credential():
         )
     # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
-        return jsonify({"error": str(e), "debug": debug_log}), 400
+        return (
+            jsonify(
+                {
+                    "error": str(e),
+                    "debug": debug_log,
+                    "session": session["state"],
+                }
+            ),
+            400,
+        )

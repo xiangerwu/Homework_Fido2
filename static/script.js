@@ -91,7 +91,7 @@ async function register() {
         // 顯示憑證資訊在網頁上
         showMessage(
             "Register_credentialInfo",
-            `User: ${username}\n註冊驗證器金要得到的credential\n${JSON.stringify(credential, null, 4)}`
+            `User: ${username}\n註冊"驗證器金鑰"得到的credential\n${JSON.stringify(credential, null, 4)}`
         );
 
         // 將憑證資料組合起來傳送到後端 /register/store-credential
