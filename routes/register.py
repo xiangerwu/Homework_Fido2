@@ -47,7 +47,7 @@ register_bp = Blueprint("register", __name__)
 
 # 網頁路徑 /register
 # 作用: 產生 WebAuthn 註冊選項
-@register_bp.route("/", methods=["POST"], strict_slashes=False)
+@register_bp.route("", methods=["POST"])
 def register():
     # 取得用戶提交的 JSON 數據
     data = request.json
@@ -101,7 +101,7 @@ def register():
 
 # 網頁路徑 /register/store-credential
 # 作用: 存儲 WebAuthn 憑證
-@register_bp.route("/store-credential", methods=["POST"], strict_slashes=False)
+@register_bp.route("store-credential", methods=["POST"])
 def store_credential():
     # 取得用戶提交的 JSON
     data = request.json
