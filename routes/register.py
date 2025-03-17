@@ -100,6 +100,7 @@ def store_credential():
     # 取得用戶提交的 JSON
     data = request.json
     username = data.get("username")
+    debug_log = []
     # 開始存儲憑證流程
     try:
         # 檢查用戶是否存在
@@ -111,6 +112,7 @@ def store_credential():
         if not clinet_credential_data:
             return jsonify({"error": "請提供有效的 JSON 數據"}), 400
 
+        debug_log.append("1. 取得用戶提交的 JSON")
         # client_response 是前端回傳的資料
         client_response = clinet_credential_data["response"]
         # 轉換 clinet_credential_data 中相關的資料，將 base64url 字串轉為 bytes 後轉換成 fido2 的物件
@@ -122,7 +124,7 @@ def store_credential():
         Attestation_Object = AttestationObject(
             base64url_to_bytes(client_response["attestationObject"])
         )
-
+        debug_log.append("2. 轉換 clinet_credential_data 中相關的資料")
         # 使用 yubiko fido2 套件完成註冊
         # 註冊完成後會得到 server_credential_data，這是後端需要儲存的註冊資料並且是 bytes 類型
         server_credential_data = app_server.server.register_complete(
@@ -131,6 +133,7 @@ def store_credential():
             attestation_object=Attestation_Object,  # 設定 attestation_object: 前端回傳的 attestationObject
         )
         #
+        debug_log.append("3. 完成註冊")
         # 將 server_credential_data 存進資料庫
         with DatabaseManager(db_users) as db:
             Add_Credential = db.insert_user(username, server_credential_data)
@@ -144,4 +147,4 @@ def store_credential():
         )
     # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e), "debug": debug_log}), 400
