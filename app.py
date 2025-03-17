@@ -25,12 +25,6 @@ sslify = SSLify(app)
 
 app.secret_key = g_secret_key
 
-"""引入拆分註冊路由區塊"""
-# 用於註冊的路由
-app.register_blueprint(register_bp, url_prefix="/register")
-# 用於驗證的路由
-app.register_blueprint(auth_bp, url_prefix="/auth")
-
 
 """ 註冊路由部份 """  # """
 
@@ -76,6 +70,12 @@ def clear():
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()
 # 通常用於測試，當模塊被引入到其他模塊或程式時，app.run()不會運行
 if __name__ == "__main__":
+
+    """引入拆分註冊路由區塊"""
+    # 用於註冊的路由
+    app.register_blueprint(register_bp, url_prefix="/register")
+    # 用於驗證的路由
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
     # 設定 IP 與 Port、啟用 debug 模式、並使用 SSL 憑證、金鑰
     app.run(
