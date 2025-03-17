@@ -28,6 +28,7 @@ class DatabaseManager:
     # 連接資料庫
     def __enter__(self):
         self.conn = sqlite3.connect(self.db_file, timeout=10)  # 連接資料庫
+        self.conn.execute("PRAGMA journal_mode=WAL;")  # 執行SQL語句
         return self
 
     # 關閉資料庫
@@ -40,7 +41,7 @@ class DatabaseManager:
     ):
         try:
             cursor = self.conn.cursor()  # 建立游標
-            cursor.execute("PRAGMA journal_mode=WAL;")  # 執行SQL語句
+            cursor.execute(query, params)  # 執行SQL語句
             # 如果 commit 為 True，則提交事務
             if commit:
                 self.conn.commit()
