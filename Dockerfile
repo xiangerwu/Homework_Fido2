@@ -1,4 +1,3 @@
-# 使用 Python 3.11 輕量版作為基底映像檔
 FROM python:3.11-slim
 
 # 設定工作目錄
@@ -13,7 +12,10 @@ RUN pip install --upgrade pip
 # 安裝所有相依套件（從 requirements.txt）
 RUN pip install -r requirements.txt
 
-# 設定 Cloud Run 預設的 PORT（確保 Flask 正確綁定）
+# 確保資料庫目錄存在（SQLite 資料庫存放在 /app/Database/）
+RUN mkdir -p /app/Database
+
+# 設定 Cloud Run 預設的 PORT
 ENV PORT=8080
 
 # 暴露 Cloud Run 使用的 port

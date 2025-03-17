@@ -16,9 +16,11 @@ g_SSL_key = r"SSL_file\\server.key"  # 這裡的 SSL_key 要改成你的 SSL 金
 g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 
 
-# SQLite Database file
-db_users = r"Database\\fido2_user.db"
-
+# 在 Cloud Run 上使用 /app/Database/fido2_user.db
+if os.getenv("GAE_ENV", ""):  # 代表 GCP Cloud Run 環境
+    db_users = "/app/Database/fido2_user.db"
+else:  # 本地端使用 SQLite
+    db_users = "Database/fido2_user.db"
 
 """ General Functions """
 
