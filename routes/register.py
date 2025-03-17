@@ -152,10 +152,7 @@ def store_credential():
         with DatabaseManager(db_users) as db:
             Add_Credential = db.insert_user(username, server_credential_data)
         debug_log.append("4. 存儲憑證")
-        # 刪除 session
-        with DatabaseManager(db_users) as db:
-            del_session = db.delete_session(username)
-        debug_log.append("5. 刪除 Session")
+
         # 回傳成功訊息
         return jsonify(
             {
@@ -170,3 +167,8 @@ def store_credential():
             jsonify({"error": str(e), "debug": debug_log}),
             400,
         )
+    # 無論如何都要刪除 Session
+    finally:
+        with DatabaseManager(db_users) as db:
+            del_session = db.delete_session(username)
+        debug_log.append("5. 刪除 Session")

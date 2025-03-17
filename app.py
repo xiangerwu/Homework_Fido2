@@ -1,6 +1,6 @@
 from config.global_config import *
 from Database.db_manager import DatabaseManager
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect
 from flask_cors import CORS
 from flask_sslify import SSLify
 from fido2.server import Fido2Server
@@ -26,7 +26,15 @@ sslify = SSLify(app)
 app.secret_key = g_secret_key
 
 
-""" 註冊路由部份 """  # """
+""" 註冊路由部份 """
+
+
+# 強制重定向到 HTTPS
+@app.before_request
+def enforce_https():
+    if not request.is_secure:
+        # 構建 HTTPS URL
+        return redirect(request.url.replace("http://", "https://", 1))
 
 
 # 首頁

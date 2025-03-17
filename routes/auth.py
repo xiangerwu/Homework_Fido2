@@ -196,10 +196,17 @@ def verify_credential():
                 "signCount": parsed_auth_data.counter,
             }
         )
+    # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息
         User_Log = Login_Log(username, request, authenticator_type, 0)
         return jsonify({"error": str(e)}), 400
+
+    # 最後清除 Session
+    finally:
+        # 清除 Session
+        with DatabaseManager(db_users) as db:
+            db.delete_session(username)
 
 
 # 記錄用戶登入紀錄

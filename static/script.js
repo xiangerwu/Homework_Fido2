@@ -223,6 +223,7 @@ async function clearData() {
     // 確認是否要清除憑證資訊
     if (confirm("確定要清除全部憑證資訊嗎？此操作無法還原！")) {
         // 提示使用者輸入密碼
+        
         const password = prompt("請輸入您的密碼來確認此操作：");
 
         // 確保密碼存在
