@@ -9,6 +9,7 @@ import hashlib
 
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
+
 server = Fido2Server(fido2_rp, attestation="DIRECT")
 
 
@@ -18,14 +19,15 @@ if os.getenv("GAE_ENV", ""):
     CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
 else:
     CORS(app, ORIGIN="*", supports_credentials=True)
-    # 引入拆分的路由
-    # from routes.register import register_bp
-    # from routes.auth import auth_bp
-    # """引入拆分註冊路由區塊"""
-    # # 用於註冊的路由
-    # app.register_blueprint(register_bp, url_prefix="/register")
-    # # 用於驗證的路由
-    # app.register_blueprint(auth_bp, url_prefix="/auth")
+# 引入拆分的路由
+from routes.register import register_bp
+from routes.auth import auth_bp
+
+"""引入拆分註冊路由區塊"""
+# 用於註冊的路由
+app.register_blueprint(register_bp, url_prefix="/register")
+# 用於驗證的路由
+app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # 設定 SSL
 sslify = SSLify(app)
@@ -100,15 +102,15 @@ if __name__ == "__main__":
     # 用於驗證的路由
     app.register_blueprint(auth_bp, url_prefix="/auth")
     # 判斷運行環境是不是本地，如果是本地則使用 SSL 憑證
-    if os.getenv("GAE_ENV", ""):
-        print("Running on Cloud Run")
-        # 設定 IP 與 Port、啟用 debug 模式、並使用 SSL 憑證、金鑰
-        app.run(
-            host=g_IP,
-            port=g_Port,
-            debug=True,
-        )
-    else:
-        print("Running on Local")
-        # 設定 IP 與 Port、啟用 debug 模式
-        app.run(host=g_IP, port=g_Port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
+    # if os.getenv("GAE_ENV", ""):
+    #     print("Running on Cloud Run")
+
+    app.run(
+        host=g_IP,
+        port=g_Port,
+        debug=True,
+    )
+    # else:
+    #     print("Running on Local")
+    #     # 設定 IP 與 Port、啟用 debug 模式
+    #     app.run(host=g_IP, port=g_Port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
