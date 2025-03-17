@@ -34,7 +34,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
     PublicKeyCredentialUserEntity,
 )
-from app import server as app_server
+import app as app_server
 
 """ Create Blueprint """
 # 創建 Blueprint

@@ -36,7 +36,8 @@ from fido2.webauthn import (
     AuthenticationResponse,
     webauthn_json_mapping,
 )
-from app import server as app_server
+
+import app as app_server
 
 from user_agents import parse
 
