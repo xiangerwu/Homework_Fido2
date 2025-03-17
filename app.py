@@ -10,9 +10,6 @@ from fido2.webauthn import PublicKeyCredentialRpEntity
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
 server = Fido2Server(fido2_rp, attestation="DIRECT")
 
-# 引入拆分的路由
-from routes.register import register_bp
-from routes.auth import auth_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 # 設定 CORS 跨域請求
@@ -70,6 +67,9 @@ def clear():
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()
 # 通常用於測試，當模塊被引入到其他模塊或程式時，app.run()不會運行
 if __name__ == "__main__":
+    # 引入拆分的路由
+    from routes.register import register_bp
+    from routes.auth import auth_bp
 
     """引入拆分註冊路由區塊"""
     # 用於註冊的路由
