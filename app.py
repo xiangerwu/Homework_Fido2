@@ -19,15 +19,6 @@ if os.getenv("GAE_ENV", ""):
     CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
 else:
     CORS(app, ORIGIN="*", supports_credentials=True)
-# 引入拆分的路由
-from routes.register import register_bp
-from routes.auth import auth_bp
-
-"""引入拆分註冊路由區塊"""
-# 用於註冊的路由
-app.register_blueprint(register_bp, url_prefix="/register")
-# 用於驗證的路由
-app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # 設定 SSL
 sslify = SSLify(app)
