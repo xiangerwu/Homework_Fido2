@@ -34,7 +34,7 @@ from fido2.webauthn import (
     UserVerificationRequirement,
     PublicKeyCredentialUserEntity,
 )
-from fido2.server import Fido2Server
+from app import server as app_server
 
 """ Create Blueprint """
 # 創建 Blueprint
@@ -66,7 +66,7 @@ def register():
     # 這裡設定了用戶名稱、用戶 ID、用戶驗證、驗證器平台、密鑰設定
     # 這裡的設定可以根據需求進行更改
     # 這裡的 user 設定是必須的，如果不設定會報錯
-    options, state = Fido2Server.server.register_begin(
+    options, state = app_server.server.register_begin(
         user=PublicKeyCredentialUserEntity(
             id=user_id,
             name=username,
@@ -125,7 +125,7 @@ def store_credential():
 
         # 使用 yubiko fido2 套件完成註冊
         # 註冊完成後會得到 server_credential_data，這是後端需要儲存的註冊資料並且是 bytes 類型
-        server_credential_data = Fido2Server.server.register_complete(
+        server_credential_data = app_server.server.register_complete(
             state=session["state"],  # 從 session 中取得 state，這是前面註冊時暫存的
             client_data=Collected_ClientData,  # 設定 client_data: 前端回傳的 clientDataJSON
             attestation_object=Attestation_Object,  # 設定 attestation_object: 前端回傳的 attestationObject

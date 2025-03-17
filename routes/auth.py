@@ -36,7 +36,7 @@ from fido2.webauthn import (
     AuthenticationResponse,
     webauthn_json_mapping,
 )
-from fido2.server import Fido2Server
+from app import server as app_server
 
 from user_agents import parse
 
@@ -80,7 +80,7 @@ def verify_register():
 
         # 使用 yubiko fido2 套件開始驗證
         # 這裡設定了驗證選項，並且設定了驗證設備的要求
-        options, state = Fido2Server.server.authenticate_begin(
+        options, state = app_server.server.authenticate_begin(
             credentials=[AttestedCredential],  # 設定 credentials: 後端儲存的註冊資料
             user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
         )
@@ -175,7 +175,7 @@ def verify_credential():
 
         # 使用 yubiko fido2 套件完成驗證
         # 這裡的 auth_result 是後端驗證後的結果
-        auth_result = Fido2Server.server.authenticate_complete(
+        auth_result = app_server.server.authenticate_complete(
             state=session["state"],  # 從 session 中取得 state
             credentials=Server_Credentials,  # 後端儲存的註冊資料
             response=Client_Response,  # 前端回傳的 client_response
