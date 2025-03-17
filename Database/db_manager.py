@@ -119,6 +119,38 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error getting user log: {e}")
 
+    # 新增使用者 session
+    def insert_session(self, username, session):
+        try:
+            query = "INSERT INTO Users_Session (User_name, Session) VALUES (?, ?);"
+            return self.execute_query(query, (username, session), commit=True)
+        except Exception as e:
+            raise Exception(f"Error inserting session: {e}")
+
+    # 查詢 session
+    def get_session(self, username):
+        try:
+            query = "SELECT Session FROM Users_Session WHERE User_name = ?;"
+            return self.execute_query(query, (username,), fetchone=True)
+        except Exception as e:
+            raise Exception(f"Error getting session: {e}")
+
+    # 更新 session
+    def update_session(self, username, session):
+        try:
+            query = "UPDATE Users_Session SET Session = ? WHERE User_name = ?;"
+            return self.execute_query(query, (session, username), commit=True)
+        except Exception as e:
+            raise Exception(f"Error updating session: {e}")
+
+    # 刪除 session，
+    def delete_session(self, username):
+        try:
+            query = "DELETE FROM Users_Session WHERE User_name = ?;"
+            return self.execute_query(query, (username,), commit=True)
+        except Exception as e:
+            raise Exception(f"Error deleting session: {e}")
+
     # 刪除用戶，無回傳
     def delete_user(self, username):
         try:
@@ -132,7 +164,8 @@ class DatabaseManager:
         try:
             clear_Users_List = "DELETE FROM Users_List;"
             clear_Users_Log = "DELETE FROM Users_Log;"
-            for i in [clear_Users_Log, clear_Users_List]:
+            clear_Users_Session = "DELETE FROM Users_Session;"
+            for i in [clear_Users_Log, clear_Users_List, clear_Users_Session]:
                 self.execute_query(i, commit=True)
             return "Database cleared"
         except Exception as e:

@@ -8,7 +8,7 @@
 
 """ Import Module """
 # 引入 os 模塊
-import os
+import os, json
 
 # 引入 flask 模塊
 from flask import Blueprint, request, jsonify, session
@@ -24,7 +24,7 @@ from config.global_config import (
 )
 
 # 引入 db_manager 自定義模塊
-from config.db_manager import DatabaseManager
+from Database.db_manager import DatabaseManager
 
 
 # 引入 fido2 模塊
@@ -87,7 +87,10 @@ def verify_register():
         )
 
         # 更新 session 中的 state
-        session["state"] = state
+        # session["state"] = state
+        serialized_state = json.dumps(state)
+        with DatabaseManager(db_users) as db:
+            save_session = db.insert_session(username, serialized_state)
         # 顯示 state
         # print("Auth state:", state)
         # 轉換 options 為 JSON 格式
@@ -116,12 +119,6 @@ def verify_credential():
         client_credential_data = data.get("credential")
         if not client_credential_data:
             return jsonify({"error": "錯誤的 credential"}), 400
-
-        # expected_challenge 用來驗證 session 中的 challenge
-        # 這是前面步驟的 challenge
-        expected_challenge = session.get("state", {}).get("challenge", None)
-        if expected_challenge is None:
-            return jsonify({"error": "session 的 challenge 不存在"}), 400
 
         # 從後端資料庫中取得 Credential 資料
         # 這裡的 server_credential_data 是後端儲存的註冊資料，並且是 bytes
@@ -172,12 +169,18 @@ def verify_credential():
             },
         )
 
+        # 這裡的 User_Session 是後端儲存的 session 資料
+        User_Session = None
+        with DatabaseManager(db_users) as db:
+            User_Session = json.loads(db.get_session(username)[0])
+        if not User_Session:
+            raise Exception("Session not found for the user")
         """""" """""" """ 區塊結束 """ """""" """"""
 
         # 使用 yubiko fido2 套件完成驗證
         # 這裡的 auth_result 是後端驗證後的結果
         auth_result = app_server.server.authenticate_complete(
-            state=session["state"],  # 從 session 中取得 state
+            state=User_Session,  # 從 session 中取得 state
             credentials=Server_Credentials,  # 後端儲存的註冊資料
             response=Client_Response,  # 前端回傳的 client_response
         )

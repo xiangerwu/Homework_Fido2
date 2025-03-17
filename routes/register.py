@@ -22,7 +22,7 @@ from config.global_config import (
 )
 
 # 引入 db_manager 自定義模塊
-from config.db_manager import DatabaseManager
+from Database.db_manager import DatabaseManager
 
 
 # 引入 fido2 模塊
@@ -84,7 +84,11 @@ def register():
     options_json = encode_bytes_to_base64(options_dict)
 
     # 暫存 state，其中包含 challenge 之後驗證會用到
-    session["state"] = state
+    # session["state"] = state
+    # 序列化 session["state"] 為 JSON 字串
+    serialized_state = json.dumps(state)
+    with DatabaseManager(db_users) as db:
+        save_session = db.insert_session(username, serialized_state)
     # print("state:", state)
 
     # print("Add user result:", Add_User)
@@ -125,10 +129,18 @@ def store_credential():
             base64url_to_bytes(client_response["attestationObject"])
         )
         debug_log.append("2. 轉換 clinet_credential_data 中相關的資料")
+        # 從資料庫中取得 Session
+        User_Session = None
+        with DatabaseManager(db_users) as db:
+            User_Session = json.loads(db.get_session(username)[0])
+        if not User_Session:
+            raise Exception("Session not found for the user")
+
+        debug_log.append("2.1 取得用戶 Session")
         # 使用 yubiko fido2 套件完成註冊
         # 註冊完成後會得到 server_credential_data，這是後端需要儲存的註冊資料並且是 bytes 類型
         server_credential_data = app_server.server.register_complete(
-            state=session["state"],  # 從 session 中取得 state，這是前面註冊時暫存的
+            state=User_Session,  # 從 session 中取得 state，這是前面註冊時暫存的
             client_data=Collected_ClientData,  # 設定 client_data: 前端回傳的 clientDataJSON
             attestation_object=Attestation_Object,  # 設定 attestation_object: 前端回傳的 attestationObject
         )
@@ -137,6 +149,11 @@ def store_credential():
         # 將 server_credential_data 存進資料庫
         with DatabaseManager(db_users) as db:
             Add_Credential = db.insert_user(username, server_credential_data)
+        debug_log.append("4. 存儲憑證")
+        # 刪除 session
+        with DatabaseManager(db_users) as db:
+            del_session = db.delete_session(username)
+        debug_log.append("5. 刪除 Session")
         # 回傳成功訊息
         return jsonify(
             {
@@ -148,12 +165,6 @@ def store_credential():
     # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
         return (
-            jsonify(
-                {
-                    "error": str(e),
-                    "debug": debug_log,
-                    "session": session["state"],
-                }
-            ),
+            jsonify({"error": str(e), "debug": debug_log}),
             400,
         )

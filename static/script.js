@@ -32,8 +32,13 @@ async function toggleCollapse(id, btn) {
     }
 }
 
-
-
+// 根據當前主機來設置不同的 URL
+let direct_url;
+if (window.location.hostname === "localhost") {
+    window.direct_url = "https://localhost:5000"; // 本地開發環境
+} else {
+    window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
+}
 // 函式名稱: sendRequest
 // 作用: 向後端發送請求
 // 參數: url (string) - 請求的路徑
@@ -42,7 +47,7 @@ async function toggleCollapse(id, btn) {
 // 回傳: response.json() - 後端回應的資料
 async function sendRequest(url, method, data) {
     const response = await fetch(
-        "https://fido2.akitawan.moe" + url, {
+        window.direct_url + url, {
         method: method,
         // credentials: 'include',
         headers: { "Content-Type": "application/json" },
@@ -217,18 +222,37 @@ async function verify_register() {
 async function clearData() {
     // 確認是否要清除憑證資訊
     if (confirm("確定要清除全部憑證資訊嗎？此操作無法還原！")) {
+        // 提示使用者輸入密碼
+        const password = prompt("請輸入您的密碼來確認此操作：");
+
+        // 確保密碼存在
+        if (!password) {
+            alert("未輸入密碼，操作已取消！");
+            return;
+        }
+
+        // 加密密碼（使用 SHA-256）
+        const hashedPassword = await hashPassword(password);
 
         // 清除網頁上的訊息
         showMessage("Register_credentialInfo", "");
         showMessage("verify-register_credentialInfo", "");
         // 清除後端的憑證資訊
         try {
-            const result = await sendRequest("/clear", "POST", "No Data");
+            const result = await sendRequest("/clear", "POST", hashedPassword);
             console.log("清除結果:", result);
 
             await navigator.credentials.preventSilentAccess();
             console.log("前端瀏覽器中的憑證已清除");
+            // alert("前端瀏覽器中憑證資訊已清除！");
+            // 解析後端回傳的資料
+            if (result.error) {
+                console.error("清除錯誤:", result.error);
+                alert("後端清除失敗：" + result.error + "！");
+                return;
+            }
             alert("憑證資訊已清除！");
+            // 更新使用者列表
             updateUserList();
         } catch (error) {
             // 網路錯誤處理
@@ -239,6 +263,16 @@ async function clearData() {
 
     }
 } // end of clear()
+
+// 使用 SHA-256 加密密碼
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, "0")).join("");
+    return hashHex;
+}
 
 // export 函式
 export {
@@ -262,7 +296,7 @@ async function updateUserList() {
 
     try {
         // 發送 GET 請求到後端 API
-        const response = await fetch("https://fido2.akitawan.moe");
+        const response = await fetch(window.direct_url+"/users");
 
 
         // 確保回應成功

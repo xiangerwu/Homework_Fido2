@@ -1,10 +1,11 @@
 from config.global_config import *
-from config.db_manager import DatabaseManager
-from flask import Flask, render_template, jsonify
+from Database.db_manager import DatabaseManager
+from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 from flask_sslify import SSLify
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
+import hashlib
 
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
@@ -13,9 +14,19 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 # 設定 CORS 跨域請求
+if os.getenv("GAE_ENV", ""):
+    CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
+else:
+    CORS(app, ORIGIN="*", supports_credentials=True)
+    # 引入拆分的路由
+    from routes.register import register_bp
+    from routes.auth import auth_bp
 
-CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
-# CORS(app, ORIGIN="*", supports_credentials=True)
+    """引入拆分註冊路由區塊"""
+    # 用於註冊的路由
+    app.register_blueprint(register_bp, url_prefix="/register")
+    # 用於驗證的路由
+    app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # 設定 SSL
 sslify = SSLify(app)
@@ -54,14 +65,28 @@ def users():
 # 清除測試用戶資料
 @app.route("/clear", methods=["POST"])
 def clear():
-    try:
-        # 清除資料庫
-        with DatabaseManager(db_users) as db:
-            db.delete_all()
-        return jsonify({"status": "ok", "message": "用戶資料已清除"})
-    except Exception as e:
-        # 如果發生錯誤，則返回錯誤訊息
-        return jsonify({"status": "error", "message": f"清除用戶資料失敗: {e}"})
+    # 預設密碼
+    predefined_password = "1145141919810"
+    # 將預設密碼進行 SHA-256 加密
+    hashed_predefined_password = hashlib.sha256(
+        predefined_password.encode("utf-8")
+    ).hexdigest()
+    # 從前端接收加密的密碼（應該已經經過 SHA-256 加密）
+    hashed_password_from_frontend = request.data.decode("utf-8").strip('"')
+
+    # 比對前端傳來的密碼哈希與預設密碼哈希
+    if hashed_password_from_frontend == hashed_predefined_password:
+        try:
+            # 清除資料庫
+            with DatabaseManager(db_users) as db:
+                db.delete_all()
+            return jsonify({"status": "ok", "message": "用戶資料已清除"})
+        except Exception as e:
+            # 如果發生錯誤，則返回錯誤訊息
+            return jsonify({"status": "error", "error": f"清除用戶資料失敗: {e}"})
+    else:
+        # 如果密碼不正確，則返回錯誤訊息
+        return jsonify({"status": "error", "error": "密碼錯誤"})
 
 
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()
@@ -71,16 +96,20 @@ if __name__ == "__main__":
     from routes.register import register_bp
     from routes.auth import auth_bp
 
-    """引入拆分註冊路由區塊"""
     # 用於註冊的路由
     app.register_blueprint(register_bp, url_prefix="/register")
     # 用於驗證的路由
     app.register_blueprint(auth_bp, url_prefix="/auth")
-
-    # 設定 IP 與 Port、啟用 debug 模式、並使用 SSL 憑證、金鑰
-    app.run(
-        host=g_IP,
-        port=g_Port,
-        debug=True,
-        # ssl_context=(g_SSL_crt, g_SSL_key), 託管在 Render  不需要 SSL
-    )
+    # 判斷運行環境是不是本地，如果是本地則使用 SSL 憑證
+    if os.getenv("GAE_ENV", ""):
+        print("Running on Cloud Run")
+        # 設定 IP 與 Port、啟用 debug 模式、並使用 SSL 憑證、金鑰
+        app.run(
+            host=g_IP,
+            port=g_Port,
+            debug=True,
+        )
+    else:
+        print("Running on Local")
+        # 設定 IP 與 Port、啟用 debug 模式
+        app.run(host=g_IP, port=g_Port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
