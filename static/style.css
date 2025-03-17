@@ -86,3 +86,36 @@ body {
     text-align: center; /* 水平置中 */
     vertical-align: middle; /* 垂直置中 */
 }
+
+/* 確保在小螢幕時自適應，避免太窄或太寬 */
+.responsive-container {
+    max-width: 1200px; /* 限制最大寬度，防止過寬 */
+    margin: 0 auto; /* 讓內容置中 */
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* 手機適應調整 */
+@media (max-width: 768px) {
+    .responsive-container {
+        max-width: 100%; /* 小螢幕時佔滿 */
+        padding: 10px;
+    }
+
+    /* 讓左右欄上下排列，而非並排 */
+    .row {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* 確保左右欄在手機上佔滿 */
+    .col-md-5 {
+        width: 100% !important;
+    }
+
+    .glass-effect {
+        width: 100%; /* 避免毛玻璃區塊變得太窄 */
+        max-width: 100%;
+        padding: 20px;
+    }
+}
