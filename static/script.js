@@ -347,13 +347,13 @@ async function showLoginHistory(username, userdata) {
             userdata.forEach(log => {
                 let row = `
                     <tr>
-                        <td>${log.authenticator}</td>
-                        <td>${log.ip}</td>
-                        <td>${log.os}</td>
-                        <td>${log.device}</td>
-                        <td>${log.browser}</td>
-                        <td>${log.loginTime}</td>
-                        <td>${log.success ? "❌" : "✅"}</td>
+                    <td>${log.success ? "❌" : "✅"}</td>
+                    <td>${log.ip}</td>
+                    <td>${log.device}</td>
+                    <td>${log.os}</td>
+                    <td>${log.browser}</td>
+                    <td>${log.loginTime}</td>
+                    <td>${log.authenticator}</td>
                     </tr>
                 `;
                 loginHistory.innerHTML += row;

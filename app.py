@@ -15,10 +15,10 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 # 設定 CORS 跨域請求
-if os.getenv("GAE_ENV", ""):
-    CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
-else:
-    CORS(app, ORIGIN="*", supports_credentials=True)
+# if os.getenv("GAE_ENV", ""):
+CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
+# else:
+#     CORS(app, ORIGIN="*", supports_credentials=True)
 
 # 設定 SSL
 sslify = SSLify(app)
@@ -30,12 +30,12 @@ app.secret_key = g_secret_key
 
 
 # 強制重定向到 HTTPS
-@app.before_request
-def enforce_https():
-    # 檢查請求頭 X-Forwarded-Proto 是否為 'https'
-    if request.headers.get("X-Forwarded-Proto") != "https":
-        # 如果不是 HTTPS，強制重定向到 HTTPS
-        return redirect(request.url.replace("http://", "https://", 1))
+# @app.before_request
+# def enforce_https():
+#     # 檢查請求頭 X-Forwarded-Proto 是否為 'https'
+#     if request.headers.get("X-Forwarded-Proto") != "https":
+#         # 如果不是 HTTPS，強制重定向到 HTTPS
+#         return redirect(request.url.replace("http://", "https://", 1))
 
 
 # 首頁
