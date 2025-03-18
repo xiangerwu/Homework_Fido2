@@ -92,7 +92,7 @@ async function register() {
         // 如果是 ios-safari
         let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
         if (check_ios === true) { 
-            credentialToJSON = JSON.stringify(newCredentialInfo);
+            credentialToJSON = JSON.stringify(credential);
             var store_credential = { username: username, credential: credentialToJSON, };
         }
         else
