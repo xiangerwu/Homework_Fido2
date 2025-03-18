@@ -111,13 +111,14 @@ def verify_register():
 # 作用: 驗證 WebAuthn 憑證回應
 @auth_bp.route("verify-credential", methods=["POST"], strict_slashes=False)
 def verify_credential():
-
+    debug_log = []
     # 取得用戶提交的 JSON 數據
     data = request.json
     username = data.get("username")
     if not username:
         return jsonify({"error": "請提供使用者名稱"}), 400
     # 驗證憑證流程
+    debug_log.append("驗證憑證流程")
     try:
         # 檢查資料是否有效，並取得註冊資料(前端)或錯誤回傳
         client_credential_data = data.get("credential")
@@ -130,6 +131,8 @@ def verify_credential():
             server_credential_data = db.get_credential(username)[0]
         if not server_credential_data:
             return jsonify({"error": "資料庫中的用戶憑證不存在"}), 400
+
+        debug_log.append("取得後端資料庫中的 Credential 資料")
 
         # 這裡將 bytes 資料轉換為 Authenticator
         restored_server_credential_data = AuthenticatorData(server_credential_data)
@@ -162,6 +165,8 @@ def verify_credential():
         )
 
         """ response """
+        debug_log.append("整理 authenticate_complete 需要的變數")
+
         # 將前端回傳的 client_response 轉換為 AuthenticationResponse 格式
         Client_Response = AuthenticationResponse(
             id=base64url_to_bytes(client_credential_data["id"]),
@@ -173,7 +178,7 @@ def verify_credential():
                 "signature": base64url_to_bytes(client_response["signature"]),
             },
         )
-
+        debug_log.append("轉換 client_response 為 AuthenticationResponse 格式")
         #
         # 這裡的 User_Session 是後端儲存的 session 資料
         User_Session = None
@@ -182,6 +187,8 @@ def verify_credential():
         if not User_Session:
             raise Exception("Session not found for the user")
         #
+
+        debug_log.append("取得用戶 Session")
         """ 區塊結束 """
         #
         # 使用 yubiko fido2 套件完成驗證
@@ -191,7 +198,7 @@ def verify_credential():
             credentials=Server_Credentials,  # 後端儲存的註冊資料
             response=Client_Response,  # 前端回傳的 client_response
         )
-
+        debug_log.append("完成驗證")
         # 成功驗證後，記錄登入資訊到 Users_Log
         User_Log = Login_Log(username, request, authenticator_type, 1)
 
@@ -207,7 +214,7 @@ def verify_credential():
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息
         User_Log = Login_Log(username, request, authenticator_type, 0)
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e), "debug": debug_log}), 400
 
     # 最後清除 Session
     finally:
