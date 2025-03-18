@@ -100,7 +100,9 @@ async function hashPassword(password) {
 
 // 判斷是否是 iOS Safari
 async function isiOSSafari() {
-    return /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+    
+    let result  = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+    return result;
 }
 
 // 將憑證轉換為 JSON 格式

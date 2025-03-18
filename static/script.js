@@ -99,9 +99,13 @@ async function register() {
         console.log("將憑證資料傳送到後端");
 
         if (isiOSSafari()) {
-            credential = credentialToJSON(credential);
+            credentialToJSON = credentialToJSON(credential);
+            var store_credential = { username: username, credential: credentialToJSON, };
         }
-        var store_credential = { username: username, credential: credential, };
+        else
+        {
+            var store_credential = { username: username, credential: credential, };
+        }
         console.log("store_credential:", store_credential);
 
         const result = await sendRequest("/register/store-credential", "POST", store_credential);
