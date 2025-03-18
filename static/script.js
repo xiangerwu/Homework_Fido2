@@ -13,8 +13,6 @@ import {
     NetworkError,
     toggleCollapse,
     hashPassword,
-    isiOSSafari,
-    credentialToJSON,
 
 } from "./web_functions.js";
 
@@ -89,15 +87,9 @@ async function register() {
         console.log("將憑證資料傳送到後端");
         // 如果是 ios-safari
         var store_credential = null;
-        let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
-        if (check_ios === true) {
-            let credential_JSON = null;
-            credential_JSON =  credentialToJSON(credential);
-            store_credential = { username: username, credential: credential_JSON, };
-        }
-        else {
-            store_credential = { username: username, credential: credential, };
-        }
+        
+        store_credential = { username: username, credential: credential, };
+        
 
         showMessage(
             "Register_credentialInfo",
