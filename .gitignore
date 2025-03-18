@@ -4,3 +4,8 @@ routes/__pycache__/*
 
 __pycache__/*
 __pycache__/
+static/node_modules/*
+
+static/eslint.config.mjs
+static/package*
+

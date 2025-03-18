@@ -90,16 +90,17 @@ async function register() {
         // 組合憑證資料 (username, credential)
         console.log("將憑證資料傳送到後端");
         // 如果是 ios-safari
+        var store_credential = null;
         let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
-        if (check_ios === true) { 
-            let credentialToJSON = credentialToJSON(credential);
-            var store_credential = { username: username, credential: credentialToJSON, };
+        if (check_ios === true) {
+            let credentialToJSON = {};
+            credentialToJSON = Object.assign({}, credentialToJSON(credential));;
+            store_credential = { username: username, credential: credentialToJSON, };
         }
-        else
-        {
-            var store_credential = { username: username, credential: credential, };
+        else {
+            store_credential = { username: username, credential: credential, };
         }
-        
+
         showMessage(
             "Register_credentialInfo",
             `User: ${username}\n註冊"驗證器金鑰"得到的credential\n${JSON.stringify(store_credential.credential, null, 4)}`
@@ -209,7 +210,7 @@ async function verify_register() {
         // 顯示登入紀錄  
         const user_log = await sendRequest("/auth/user-log", "POST", { username });
         console.log("user_log:", user_log);
-        showLoginHistory(username,user_log);
+        showLoginHistory(username, user_log);
 
     } catch (error) {
         // 網路錯誤處理
@@ -227,7 +228,7 @@ async function clearData() {
     // 確認是否要清除憑證資訊
     if (confirm("確定要清除全部憑證資訊嗎？此操作無法還原！")) {
         // 提示使用者輸入密碼
-        
+
         const password = prompt("請輸入您的密碼來確認此操作：");
 
         // 確保密碼存在
@@ -281,7 +282,7 @@ async function updateUserList() {
 
     try {
         // 發送 GET 請求到後端 API
-        const response = await fetch(window.direct_url+"/users");
+        const response = await fetch(window.direct_url + "/users");
 
 
         // 確保回應成功
