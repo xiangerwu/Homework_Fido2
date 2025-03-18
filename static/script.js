@@ -27,8 +27,6 @@ window.toggleCollapse = toggleCollapse;
 
 
 // 根據當前主機來設置不同的 URL
-let direct_url;
-
 window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
 
 // 函式名稱: sendRequest
@@ -95,7 +93,6 @@ async function register() {
         if (check_ios === true) {
             let credential_JSON = null;
             credential_JSON =  credentialToJSON(credential);
-            credential_JSON = Object.assign({}, credentialToJSON(credential));
             store_credential = { username: username, credential: credential_JSON, };
         }
         else {
@@ -110,7 +107,13 @@ async function register() {
         // 將憑證資料組合起來傳送到後端 /register/store-credential
         console.log("store_credential:", store_credential);
 
-        const result = await sendRequest("/register/store-credential", "POST", store_credential);
+        const result = await fetch(window.direct_url + "/register/store-credential", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: store_credential,
+        });
+
+        // const result = await sendRequest("/register/store-credential", "POST", store_credential);
 
         // 解析回傳資料是否有錯誤，有錯誤則顯示錯誤訊息
         if (result.error) {
