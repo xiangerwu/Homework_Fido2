@@ -99,6 +99,38 @@ async function hashPassword(password) {
 }
 
 
+// 將憑證轉換為 JSON 格式
+function credentialToJSON(credential) {
+    if (!credential) return null;
+
+    // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
+    let temp_json = Object.assign({}, credential);
+    temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : null;
+    temp_json.authenticatorAttachment = credential.authenticatorAttachment || null,
+    temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
+    temp_json.id = credential.id,
+    temp_json.response = {
+        attestationObject: credential.response.attestationObject
+            ? arrayBufferToBase64(credential.response.attestationObject)
+            : null,
+        authenticatorData: credential.response.getAuthenticatorData
+            ? arrayBufferToBase64(credential.response.getAuthenticatorData())
+            : null,
+        clientDataJSON: credential.response.clientDataJSON
+            ? arrayBufferToBase64(credential.response.clientDataJSON)
+            : null,
+        publicKey: credential.response.getPublicKey
+            ? arrayBufferToBase64(credential.response.getPublicKey())
+            : null,
+        publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
+            ? credential.response.getPublicKeyAlgorithm()
+            : null,
+        transports: credential.response.getTransports ? credential.response.getTransports() : [],
+};
+    temp_json.type = credential.type;
+    return temp_json;
+}
+
 // 匯出函式，讓其他程式使用
 export {
     base64UrlToUint8Array,
@@ -109,5 +141,5 @@ export {
     NetworkError,
     toggleCollapse,
     hashPassword,
-
+    credentialToJSON,
 }

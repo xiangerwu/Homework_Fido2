@@ -6,14 +6,11 @@
 // 引入 web_functions.js 檔案，將常用的放進去減少程式碼重複
 import {
     base64UrlToUint8Array,
-    uint8ArrayToBase64Url,
-    arrayBufferToBase64,
     showMessage,
     appendMessage,
     NetworkError,
     toggleCollapse,
     hashPassword,
-    isiOSSafari,
     credentialToJSON,
 
 } from "./web_functions.js";
@@ -186,7 +183,7 @@ async function verify_register() {
 
         // 第三步: 將憑證傳給後端完成登入
         console.log("3.將憑證傳給後端完成登入");
-        
+
         // 如果是 ios-safari
         var verify_credential = null;
         let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
