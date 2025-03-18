@@ -13,6 +13,8 @@ import {
     NetworkError,
     toggleCollapse,
     hashPassword,
+    isiOSSafari,
+    credentialToJSON,
 
 } from "./web_functions.js";
 
@@ -87,9 +89,15 @@ async function register() {
         console.log("將憑證資料傳送到後端");
         // 如果是 ios-safari
         var store_credential = null;
-        
-        store_credential = { username: username, credential: credential, };
-        
+        let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+        if (check_ios === true) {
+            let credential_JSON = null;
+            credential_JSON =  credentialToJSON(credential);
+            store_credential = { username: username, credential: credential_JSON, };
+        }
+        else {
+            store_credential = { username: username, credential: credential, };
+        }
 
         showMessage(
             "Register_credentialInfo",
@@ -99,13 +107,7 @@ async function register() {
         // 將憑證資料組合起來傳送到後端 /register/store-credential
         console.log("store_credential:", store_credential);
 
-        const result = await fetch(window.direct_url + "/register/store-credential", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: store_credential,
-        });
-
-        // const result = await sendRequest("/register/store-credential", "POST", store_credential);
+        const result = await sendRequest("/register/store-credential", "POST", store_credential);
 
         // 解析回傳資料是否有錯誤，有錯誤則顯示錯誤訊息
         if (result.error) {
@@ -184,7 +186,18 @@ async function verify_register() {
 
         // 第三步: 將憑證傳給後端完成登入
         console.log("3.將憑證傳給後端完成登入");
-        var verify_credential = { username: username, credential: credential };
+        
+        // 如果是 ios-safari
+        var verify_credential = null;
+        let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+        if (check_ios === true) {
+            let credential_JSON = null;
+            credential_JSON = credentialToJSON(credential);
+            verify_credential = { username: username, credential: credential_JSON, };
+        }
+        else {
+            verify_credential = { username: username, credential: credential, };
+        }
         // 將認證結果傳送給後端進行驗證
         const verifyResult = await sendRequest("/auth/verify-credential", "POST", verify_credential);
 
