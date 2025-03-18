@@ -136,13 +136,17 @@ def verify_credential():
 
         # 這裡將 bytes 資料轉換為 Authenticator
         restored_server_credential_data = AuthenticatorData(server_credential_data)
+        debug_log.append("轉換後端資料庫中的 Credential 資料為 AuthenticatorData")
         # 提取 restored_server_credential_data 中的 credential_data
         attested_data = restored_server_credential_data.credential_data
+        debug_log.append("提取 restored_server_credential_data 中的 credential_data")
         #
         # 使用 client_response 縮短後續程式碼
         client_response = client_credential_data["response"]
+        debug_log.append("使用 client_response 縮短後續程式碼")
         # 紀錄驗證器資訊
         authenticator_type = client_credential_data["type"]
+        debug_log.append("紀錄驗證器資訊")
         #
         """ 區塊開始 """
         """!!! 將後面 authenticate_complete 要用的變數先拉出來整理 !!!"""
@@ -156,17 +160,16 @@ def verify_credential():
                 public_key=attested_data.public_key,
             )
         ]
-
+        debug_log.append("整理 Server_Credentials")
         """<<沒用到>> auth_data (計數器需要) """
         ## 解析 authenticatorData
         ## 取得驗證資訊(前端回傳的資料)
         parsed_auth_data = AuthenticatorData(
             base64url_to_bytes(client_response["authenticatorData"])
         )
+        debug_log.append("解析 authenticatorData")
 
         """ response """
-        debug_log.append("整理 authenticate_complete 需要的變數")
-
         # 將前端回傳的 client_response 轉換為 AuthenticationResponse 格式
         Client_Response = AuthenticationResponse(
             id=base64url_to_bytes(client_credential_data["id"]),
@@ -187,8 +190,8 @@ def verify_credential():
         if not User_Session:
             raise Exception("Session not found for the user")
         #
-
         debug_log.append("取得用戶 Session")
+
         """ 區塊結束 """
         #
         # 使用 yubiko fido2 套件完成驗證
