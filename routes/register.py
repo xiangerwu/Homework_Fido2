@@ -30,10 +30,12 @@ from fido2.webauthn import (
     CollectedClientData,
     AttestationObject,
     ResidentKeyRequirement,
-    AuthenticatorAttachment,
     UserVerificationRequirement,
     PublicKeyCredentialUserEntity,
 )
+
+from fido2.attestation import AppleAttestation
+
 
 # import app as app_server
 from app import server as app_server
@@ -122,6 +124,11 @@ def store_credential():
         clinet_credential_data = data.get("credential")
         if not clinet_credential_data:
             return jsonify({"error": "請提供有效的 JSON 數據"}), 400
+        # 檢查用戶是否使用 iOS 設備
+        is_ios = (
+            "iPhone" in request.user_agent.string
+            or "Mac OS X" in request.user_agent.string
+        )
 
         debug_log.append("1. 取得用戶提交的 JSON")
         # client_response 是前端回傳的資料
@@ -132,9 +139,14 @@ def store_credential():
             base64url_to_bytes(client_response["clientDataJSON"])
         )
         # 這裡的 Attestation_Object 是 fido2 的 AttestationObject 物件
-        Attestation_Object = AttestationObject(
-            base64url_to_bytes(client_response["attestationObject"])
-        )
+        if is_ios:
+            Attestation_Object = AppleAttestation(
+                base64url_to_bytes(client_response["attestationObject"])
+            )  # iOS
+        else:
+            Attestation_Object = AttestationObject(
+                base64url_to_bytes(client_response["attestationObject"])
+            )  # 非 iOS
         debug_log.append("2. 轉換 clinet_credential_data 中相關的資料")
         # 從資料庫中取得 Session
         User_Session = None
