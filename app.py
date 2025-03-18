@@ -10,10 +10,12 @@ import hashlib
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
 
+# FIDO2 伺服器
 server = Fido2Server(fido2_rp, attestation="DIRECT")
 
-
+# 創建 Flask 應用，設定靜態資料夾與模板資料夾
 app = Flask(__name__, static_folder="static", template_folder="templates")
+
 # 設定 CORS 跨域請求
 # if os.getenv("GAE_ENV", ""):
 CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
@@ -23,6 +25,7 @@ CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
 # 設定 SSL
 sslify = SSLify(app)
 
+# 設定 secret_key
 app.secret_key = g_secret_key
 
 

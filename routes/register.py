@@ -59,6 +59,12 @@ def register():
 
     if chek_username:
         return jsonify({"error": "用戶已存在"}), 400
+    # 確認 Session 是否存在
+    with DatabaseManager(db_users) as db:
+        check_session = db.get_session(username)
+        # 如果存在則刪除
+        if check_session:
+            del_session = db.delete_session(username)
 
     # 產生隨機的用戶 ID，用於後續產生金鑰
     user_id = os.urandom(16)
@@ -86,7 +92,6 @@ def register():
     options_json = encode_bytes_to_base64(options_dict)
 
     # 暫存 state，其中包含 challenge 之後驗證會用到
-    # session["state"] = state
     # 序列化 session["state"] 為 JSON 字串
     serialized_state = json.dumps(state)
     with DatabaseManager(db_users) as db:

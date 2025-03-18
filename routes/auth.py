@@ -30,7 +30,6 @@ from Database.db_manager import DatabaseManager
 # 引入 fido2 模塊
 from fido2.webauthn import (
     AttestedCredentialData,
-    CollectedClientData,
     UserVerificationRequirement,
     AuthenticatorData,
     AuthenticationResponse,
@@ -47,7 +46,6 @@ webauthn_json_mapping.enabled = True
 # 創建 Blueprint
 auth_bp = Blueprint("auth", __name__)
 
-
 """ Auth Functions """
 
 
@@ -55,7 +53,7 @@ auth_bp = Blueprint("auth", __name__)
 # 作用: 驗證 WebAuthn 註冊資料
 @auth_bp.route("", methods=["POST"], strict_slashes=False)
 def verify_register():
-    # 取得用戶提交的 JSON 數據
+    # 取得用戶提交的 JSON 數據，並檢查用戶名稱
     data = request.json
     username = data.get("username")
     if not username:
@@ -87,9 +85,15 @@ def verify_register():
         )
 
         # 更新 session 中的 state
-        # session["state"] = state
+        # 將 state 序列化為 JSON 格式
         serialized_state = json.dumps(state)
+        # 將 state 儲存到資料庫
         with DatabaseManager(db_users) as db:
+            # 檢查 Session 是否存在，如果存在則刪除
+            check_session = db.get_session(username)
+            if check_session:
+                del_session = db.delete_session(username)
+            # 儲存 Session
             save_session = db.insert_session(username, serialized_state)
         # 顯示 state
         # print("Auth state:", state)
@@ -136,8 +140,9 @@ def verify_credential():
         client_response = client_credential_data["response"]
         # 紀錄驗證器資訊
         authenticator_type = client_credential_data["type"]
+        #
+        """ 區塊開始 """
         """!!! 將後面 authenticate_complete 要用的變數先拉出來整理 !!!"""
-
         """ credentials """
         # 是後端儲存的註冊資料
         # 將 attested_data 轉換為 AttestedCredentialData 格式
@@ -169,14 +174,16 @@ def verify_credential():
             },
         )
 
+        #
         # 這裡的 User_Session 是後端儲存的 session 資料
         User_Session = None
         with DatabaseManager(db_users) as db:
             User_Session = json.loads(db.get_session(username)[0])
         if not User_Session:
             raise Exception("Session not found for the user")
-        """""" """""" """ 區塊結束 """ """""" """"""
-
+        #
+        """ 區塊結束 """
+        #
         # 使用 yubiko fido2 套件完成驗證
         # 這裡的 auth_result 是後端驗證後的結果
         auth_result = app_server.authenticate_complete(

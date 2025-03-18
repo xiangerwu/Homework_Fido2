@@ -4,22 +4,8 @@ from config.global_config import db_users
 import sqlite3
 
 
-# 如何 import 這個 class
-# from config.db_manager import DatabaseManager
-# 如何呼叫 class
-# with DatabaseManager(db_users) as db:
-# 解釋一下這個 clas 的作用
-# 這個 class 有幾個方法
-# 1. get_user_name(username) 用來查詢用戶，回傳用戶名稱與用戶 ID
-# 2. get_credential(username) 用來查詢憑證，回傳用戶名稱與憑證
-# 3. insert_user(username, Credential) 用來新增用戶，無回傳
-# 4. update_credential(username, credential) 用來更新憑證，無回傳
-# 5. log_user_login(username, authenticator, ip, os, device, browser) 用來記錄用戶登入，無回傳
-# 6. delete_user(username) 用來刪除用戶，無回傳
-# 7. delete_all() 用來刪除所有資料，無回傳
-
-
-# 意思是使用 db_users 這個資料庫檔案來連接資料庫
+# 如何 import 這個 class：  from config.db_manager import DatabaseManager
+# 如何呼叫 class：          with DatabaseManager(db_users) as db:
 class DatabaseManager:
     # 初始化設定資料庫檔案
     def __init__(self, db_file):
@@ -104,7 +90,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error logging user login: {e}")
 
-    # 查詢所有用戶
+    # 查詢所有用戶，回傳所有用戶
     def get_all_users(self):
         try:
             query = "SELECT * FROM Users_List;"  # 查詢所有用戶
@@ -112,7 +98,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error getting all users: {e}")
 
-    # 查詢用戶登入紀錄
+    # 查詢用戶登入紀錄，回傳用戶登入紀錄
     def get_user_log(self, username):
         try:
             query = "SELECT * FROM Users_Log WHERE User_name = ?  ORDER BY login_time DESC;"  # 查詢用戶登入紀錄
@@ -120,7 +106,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error getting user log: {e}")
 
-    # 新增使用者 session
+    # 新增使用者 session，無回傳
     def insert_session(self, username, session):
         try:
             query = "INSERT INTO Users_Session (User_name, Session) VALUES (?, ?);"
@@ -128,7 +114,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error inserting session: {e}")
 
-    # 查詢 session
+    # 查詢 session，回傳 session
     def get_session(self, username):
         try:
             query = "SELECT Session FROM Users_Session WHERE User_name = ?;"
@@ -136,7 +122,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error getting session: {e}")
 
-    # 更新 session
+    # 更新 session，無回傳
     def update_session(self, username, session):
         try:
             query = "UPDATE Users_Session SET Session = ? WHERE User_name = ?;"
@@ -144,7 +130,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error updating session: {e}")
 
-    # 刪除 session，
+    # 刪除 session，無回傳
     def delete_session(self, username):
         try:
             query = "DELETE FROM Users_Session WHERE User_name = ?;"
