@@ -100,19 +100,21 @@ async function hashPassword(password) {
 
 // 判斷是否是 iOS Safari
 async function isiOSSafari() {
-    
-    let result  = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+
+    let result = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
     return result;
 }
 
 // 將憑證轉換為 JSON 格式
 function credentialToJSON(credential) {
     if (!credential) return null;
-    
+
     // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
     let temp_json = Object.assign({}, credential);
     temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : null;
-
+    temp_json.authenticatorAttachment = credential.authenticatorAttachment || null,
+    temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
+    temp_json.id = credential.id,
     temp_json.response = {
         attestationObject: credential.response.attestationObject
             ? arrayBufferToBase64(credential.response.attestationObject)
@@ -130,7 +132,8 @@ function credentialToJSON(credential) {
             ? credential.response.getPublicKeyAlgorithm()
             : null,
         transports: credential.response.getTransports ? credential.response.getTransports() : [],
-    };
+};
+    temp_json.type = credential.type;
     return temp_json;
 }
 
