@@ -108,7 +108,7 @@ async function isiOSSafari() {
 // 將憑證轉換為 JSON 格式
 function credentialToJSON(credential) {
     if (!credential) return null;
-    const clonedCredential = structuredClone(credential);
+    
     temp_json = {
         authenticatorAttachment: credential.authenticatorAttachment || null,
         clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
