@@ -87,16 +87,9 @@ async function register() {
         // credential 是 瀏覽器 API 運算後的憑證資訊
         const credential = await navigator.credentials.create({ publicKey: options.publicKey })
         // 顯示憑證資訊在網頁上
-        // 如果是 ios-safari
-        
-        showMessage(
-            "Register_credentialInfo",
-            `User: ${username}\n註冊"驗證器金鑰"得到的credential\n${JSON.stringify(credential, null, 4)}`
-        );
-
-        // 將憑證資料組合起來傳送到後端 /register/store-credential
         // 組合憑證資料 (username, credential)
         console.log("將憑證資料傳送到後端");
+        // 如果是 ios-safari
         let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
         if (check_ios === true) { 
             credentialToJSON = credentialToJSON(credential);
@@ -106,6 +99,13 @@ async function register() {
         {
             var store_credential = { username: username, credential: credential, };
         }
+        
+        showMessage(
+            "Register_credentialInfo",
+            `User: ${username}\n註冊"驗證器金鑰"得到的credential\n${JSON.stringify(store_credential.credential, null, 4)}`
+        );
+
+        // 將憑證資料組合起來傳送到後端 /register/store-credential
         console.log("store_credential:", store_credential);
 
         const result = await sendRequest("/register/store-credential", "POST", store_credential);

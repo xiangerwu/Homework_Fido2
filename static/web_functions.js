@@ -109,7 +109,7 @@ async function isiOSSafari() {
 function credentialToJSON(credential) {
     if (!credential) return null;
     
-    temp_json = {
+    let temp_json = {
         authenticatorAttachment: credential.authenticatorAttachment || null,
         clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
         id: credential.id,
