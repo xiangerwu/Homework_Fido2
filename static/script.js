@@ -97,8 +97,8 @@ async function register() {
         // 將憑證資料組合起來傳送到後端 /register/store-credential
         // 組合憑證資料 (username, credential)
         console.log("將憑證資料傳送到後端");
-
-        if (isiOSSafari()) {
+        let check_ios = isiOSSafari();
+        if (check_ios) {
             credentialToJSON = credentialToJSON(credential);
             var store_credential = { username: username, credential: credentialToJSON, };
         }
