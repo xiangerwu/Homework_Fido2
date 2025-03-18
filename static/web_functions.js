@@ -108,32 +108,33 @@ async function isiOSSafari() {
 // 將憑證轉換為 JSON 格式
 function credentialToJSON(credential) {
     if (!credential) return null;
-
-    return {
-        authenticatorAttachment: credential.authenticatorAttachment || null,
-        clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
-        id: credential.id,
-        rawId: arrayBufferToBase64(credential.rawId),
+    const clonedCredential = structuredClone(credential);
+    temp_Json = {
+        authenticatorAttachment: clonedCredential.authenticatorAttachment || null,
+        clientExtensionResults: clonedCredential.getClientExtensionResults ? clonedCredential.getClientExtensionResults() : {},
+        id: clonedCredential.id,
+        rawId: arrayBufferToBase64(clonedCredential.rawId),
         response: {
-            attestationObject: credential.response.attestationObject
-                ? arrayBufferToBase64(credential.response.attestationObject)
+            attestationObject: clonedCredential.response.attestationObject
+                ? arrayBufferToBase64(clonedCredential.response.attestationObject)
                 : undefined,
-            authenticatorData: credential.response.getAuthenticatorData
-                ? arrayBufferToBase64(credential.response.getAuthenticatorData())
+            authenticatorData: clonedCredential.response.getAuthenticatorData
+                ? arrayBufferToBase64(clonedCredential.response.getAuthenticatorData())
                 : undefined,
-            clientDataJSON: credential.response.clientDataJSON
-                ? arrayBufferToBase64(credential.response.clientDataJSON)
+            clientDataJSON: clonedCredential.response.clientDataJSON
+                ? arrayBufferToBase64(clonedCredential.response.clientDataJSON)
                 : undefined,
-            publicKey: credential.response.getPublicKey
-                ? arrayBufferToBase64(credential.response.getPublicKey())
+            publicKey: clonedCredential.response.getPublicKey
+                ? arrayBufferToBase64(clonedCredential.response.getPublicKey())
                 : undefined,
-            publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
-                ? credential.response.getPublicKeyAlgorithm()
+            publicKeyAlgorithm: clonedCredential.response.getPublicKeyAlgorithm
+                ? clonedCredential.response.getPublicKeyAlgorithm()
                 : undefined,
-            transports: credential.response.getTransports ? credential.response.getTransports() : [],
+            transports: clonedCredential.response.getTransports ? clonedCredential.response.getTransports() : [],
         },
-        type: credential.type,
-    };
+        type: clonedCredential.type,
+    }; 
+    return temp_Json;
 }
 
 // 匯出函式，讓其他程式使用
