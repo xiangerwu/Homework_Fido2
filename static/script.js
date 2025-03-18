@@ -93,8 +93,8 @@ async function register() {
         var store_credential = null;
         let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
         if (check_ios === true) {
-            let credentialToJSON = {};
-            credentialToJSON = Object.assign({}, credentialToJSON(credential));;
+            let credentialToJSON = null;
+            credentialToJSON =  credentialToJSON(credential);
             store_credential = { username: username, credential: credentialToJSON, };
         }
         else {
