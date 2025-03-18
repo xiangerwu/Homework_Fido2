@@ -109,31 +109,28 @@ async function isiOSSafari() {
 function credentialToJSON(credential) {
     if (!credential) return null;
     
-    let temp_json = {
-        authenticatorAttachment: credential.authenticatorAttachment || null,
-        clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
-        id: credential.id,
-        rawId: arrayBufferToBase64(credential.rawId),
-        response: {
-            attestationObject: credential.response.attestationObject
-                ? arrayBufferToBase64(credential.response.attestationObject)
-                : undefined,
-            authenticatorData: credential.response.getAuthenticatorData
-                ? arrayBufferToBase64(credential.response.getAuthenticatorData())
-                : undefined,
-            clientDataJSON: credential.response.clientDataJSON
-                ? arrayBufferToBase64(credential.response.clientDataJSON)
-                : undefined,
-            publicKey: credential.response.getPublicKey
-                ? arrayBufferToBase64(credential.response.getPublicKey())
-                : undefined,
-            publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
-                ? credential.response.getPublicKeyAlgorithm()
-                : undefined,
-            transports: credential.response.getTransports ? credential.response.getTransports() : [],
-        },
-        type: credential.type,
-    }; 
+    // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
+    let temp_json = Object.assign({}, credential);
+    temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : null;
+
+    temp_json.response = {
+        attestationObject: credential.response.attestationObject
+            ? arrayBufferToBase64(credential.response.attestationObject)
+            : null,
+        authenticatorData: credential.response.getAuthenticatorData
+            ? arrayBufferToBase64(credential.response.getAuthenticatorData())
+            : null,
+        clientDataJSON: credential.response.clientDataJSON
+            ? arrayBufferToBase64(credential.response.clientDataJSON)
+            : null,
+        publicKey: credential.response.getPublicKey
+            ? arrayBufferToBase64(credential.response.getPublicKey())
+            : null,
+        publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
+            ? credential.response.getPublicKeyAlgorithm()
+            : null,
+        transports: credential.response.getTransports ? credential.response.getTransports() : [],
+    };
     return temp_json;
 }
 
