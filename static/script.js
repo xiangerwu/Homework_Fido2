@@ -11,6 +11,10 @@ import {
     showMessage,
     appendMessage,
     NetworkError,
+    toggleCollapse,
+    hashPassword,
+    isiOSSafari,
+    credentialToJSON,
 
 } from "./web_functions.js";
 
@@ -20,25 +24,13 @@ window.verify_register = verify_register;
 window.clearData = clearData;
 window.toggleCollapse = toggleCollapse;
 
-async function toggleCollapse(id, btn) {
-    const section = document.getElementById(id);
-    section.classList.toggle("show");
 
-    // 切換按鈕方向
-    if (section.classList.contains("show")) {
-        btn.innerHTML = "▼";
-    } else {
-        btn.innerHTML = "▶";
-    }
-}
 
 // 根據當前主機來設置不同的 URL
 let direct_url;
-if (window.location.hostname === "localhost") {
-    window.direct_url = "https://localhost:5000"; // 本地開發環境
-} else {
-    window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
-}
+
+window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
+
 // 函式名稱: sendRequest
 // 作用: 向後端發送請求
 // 參數: url (string) - 請求的路徑
@@ -55,6 +47,7 @@ async function sendRequest(url, method, data) {
     });
     return response.json();
 }
+
 
 // WebAuthn 註冊 register 函式
 // 作用: 向後端發送註冊請求，取得註冊選項，再將憑證資訊傳送到後端
@@ -94,6 +87,8 @@ async function register() {
         // credential 是 瀏覽器 API 運算後的憑證資訊
         const credential = await navigator.credentials.create({ publicKey: options.publicKey })
         // 顯示憑證資訊在網頁上
+        // 如果是 ios-safari
+        
         showMessage(
             "Register_credentialInfo",
             `User: ${username}\n註冊"驗證器金鑰"得到的credential\n${JSON.stringify(credential, null, 4)}`
@@ -102,8 +97,13 @@ async function register() {
         // 將憑證資料組合起來傳送到後端 /register/store-credential
         // 組合憑證資料 (username, credential)
         console.log("將憑證資料傳送到後端");
+
+        if (isiOSSafari()) {
+            credential = credentialToJSON(credential);
+        }
         var store_credential = { username: username, credential: credential, };
         console.log("store_credential:", store_credential);
+
         const result = await sendRequest("/register/store-credential", "POST", store_credential);
 
         // 解析回傳資料是否有錯誤，有錯誤則顯示錯誤訊息
@@ -265,26 +265,6 @@ async function clearData() {
     }
 } // end of clear()
 
-// 使用 SHA-256 加密密碼
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, "0")).join("");
-    return hashHex;
-}
-
-// export 函式
-export {
-    register,
-    verify_register,
-    clearData,
-}
-
-
-
-
 
 // 頁面載入時獲取使用者名單
 document.addEventListener("DOMContentLoaded", updateUserList);
@@ -367,4 +347,11 @@ async function showLoginHistory(username, userdata) {
         console.error("獲取登入紀錄時發生錯誤:", error);
         loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-danger">無法載入登入紀錄</td></tr>`;
     }
+}
+
+// export 函式
+export {
+    register,
+    verify_register,
+    clearData,
 }

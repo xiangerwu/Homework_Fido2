@@ -75,6 +75,65 @@ function NetworkError(message) {
     return false;
 }
 
+// 切換折疊區塊
+async function toggleCollapse(id, btn) {
+    const section = document.getElementById(id);
+    section.classList.toggle("show");
+
+    // 切換按鈕方向
+    if (section.classList.contains("show")) {
+        btn.innerHTML = "▼";
+    } else {
+        btn.innerHTML = "▶";
+    }
+}
+
+// 使用 SHA-256 加密密碼
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(byte => byte.toString(16).padStart(2, "0")).join("");
+    return hashHex;
+}
+
+// 判斷是否是 iOS Safari
+async function isiOSSafari() {
+    return /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+}
+
+// 將憑證轉換為 JSON 格式
+function credentialToJSON(credential) {
+    if (!credential) return null;
+
+    return {
+        authenticatorAttachment: credential.authenticatorAttachment || null,
+        clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
+        id: credential.id,
+        rawId: arrayBufferToBase64(credential.rawId),
+        response: {
+            attestationObject: credential.response.attestationObject
+                ? arrayBufferToBase64(credential.response.attestationObject)
+                : undefined,
+            authenticatorData: credential.response.getAuthenticatorData
+                ? arrayBufferToBase64(credential.response.getAuthenticatorData())
+                : undefined,
+            clientDataJSON: credential.response.clientDataJSON
+                ? arrayBufferToBase64(credential.response.clientDataJSON)
+                : undefined,
+            publicKey: credential.response.getPublicKey
+                ? arrayBufferToBase64(credential.response.getPublicKey())
+                : undefined,
+            publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
+                ? credential.response.getPublicKeyAlgorithm()
+                : undefined,
+            transports: credential.response.getTransports ? credential.response.getTransports() : [],
+        },
+        type: credential.type,
+    };
+}
+
 // 匯出函式，讓其他程式使用
 export {
     base64UrlToUint8Array,
@@ -83,4 +142,8 @@ export {
     showMessage,
     appendMessage,
     NetworkError,
+    toggleCollapse,
+    hashPassword,
+    isiOSSafari,
+    credentialToJSON,
 }
