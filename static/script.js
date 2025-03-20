@@ -12,6 +12,10 @@ import {
     toggleCollapse,
     hashPassword,
     credentialToJSON,
+    getRandomColor,
+    setRandomColor,
+    setRandomOrder,
+    generateMarqueeText
 
 } from "./web_functions.js";
 
@@ -360,9 +364,26 @@ async function showLoginHistory(username, userdata) {
     }
 }
 
+
+
+// 每次載入頁面時設置隨機顏色與打亂順序
+window.onload = function () {
+    generateMarqueeText(80); // 生成 跑馬燈文字
+    setRandomColor();  // 設置隨機顏色
+    setRandomOrder();  // 設置隨機顯示順序
+};
+
+// // 每隔一段時間重新設置顏色與順序
+// setInterval(function () {
+//     setRandomColor();  // 每 5 秒更換一次顏色
+//     setRandomOrder();  // 每 5 秒打亂顯示順序
+// }, 1000);
+
+
 // export 函式
 export {
     register,
     verify_register,
     clearData,
 }
+
