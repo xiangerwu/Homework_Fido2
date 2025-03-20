@@ -338,7 +338,7 @@ async function showLoginHistory(username, userdata) {
             userdata.forEach(log => {
                 let row = `
                     <tr>
-                    <td>${log.loginStatus ? "❌" : "✅"}</td>
+                    <td>${log.loginStatus ? "✅" : "❌"}</td>
                     <td>${log.ip}</td>
                     <td>${log.device}</td>
                     <td>${log.os}</td>
