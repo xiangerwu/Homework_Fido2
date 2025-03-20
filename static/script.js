@@ -24,7 +24,7 @@ window.toggleCollapse = toggleCollapse;
 
 
 // 根據當前主機來設置不同的 URL
-window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
+window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
 
 // 函式名稱: sendRequest
 // 作用: 向後端發送請求

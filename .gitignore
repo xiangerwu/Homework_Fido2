@@ -9,3 +9,4 @@ static/node_modules/*
 static/eslint.config.mjs
 static/package*
 
+SSL_file/*
