@@ -32,6 +32,7 @@ function uint8ArrayToBase64Url(uint8Array) {
     回傳: base64 (string) - base64 字串
 */
 function arrayBufferToBase64(buffer) {
+    if (!buffer || !(buffer instanceof ArrayBuffer) || buffer.byteLength === 0) return "";
     let binary = "";
     const bytes = new Uint8Array(buffer);
     for (let i = 0; i < bytes.byteLength; i++) {
@@ -112,19 +113,17 @@ function credentialToJSON(credential) {
         attestationObject: credential.response.attestationObject
             ? arrayBufferToBase64(credential.response.attestationObject)
             : "",
-        authenticatorData: credential.response.getAuthenticatorData
-            ? arrayBufferToBase64(credential.response.getAuthenticatorData())
+        authenticatorData: credential.response.authenticatorData
+            ? arrayBufferToBase64(credential.response.authenticatorData)
             : "",
         clientDataJSON: credential.response.clientDataJSON
             ? arrayBufferToBase64(credential.response.clientDataJSON)
             : "",
-        publicKey: credential.response.getPublicKey
-            ? arrayBufferToBase64(credential.response.getPublicKey())
+        publicKey: credential.response.publicKey
+            ? arrayBufferToBase64(credential.response.publicKey)
             : "",
-        publicKeyAlgorithm: credential.response.getPublicKeyAlgorithm
-            ? credential.response.getPublicKeyAlgorithm()
-            : -1,
-        transports: credential.response.getTransports ? credential.response.getTransports() : [],
+        publicKeyAlgorithm: credential.response.publicKeyAlgorithm || -1,
+        transports: credential.response.transports || []
 };
     temp_json.type = credential.type || "public-key";
     return temp_json;
