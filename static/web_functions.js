@@ -119,10 +119,13 @@ function credentialToJSON(credential) {
         clientDataJSON: credential.response.clientDataJSON
             ? arrayBufferToBase64(credential.response.clientDataJSON)
             : "",
+        signature: credential.response.signature
+            ? arrayBufferToBase64(credential.response.signature)
+            : "",
         publicKey: credential.response.publicKey
             ? arrayBufferToBase64(credential.response.publicKey)
             : "",
-        publicKeyAlgorithm: credential.response.publicKeyAlgorithm || -1,
+        // publicKeyAlgorithm: credential.response.publicKeyAlgorithm || -1,
         transports: credential.response.transports || []
 };
     temp_json.type = credential.type || "public-key";
