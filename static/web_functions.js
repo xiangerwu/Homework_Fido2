@@ -106,9 +106,9 @@ function credentialToJSON(credential) {
     // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
     let temp_json = Object.assign({}, credential);
     temp_json.authenticatorAttachment = credential.authenticatorAttachment || null,
-    temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
-    temp_json.id = credential.id || "",
-    temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : "";
+        temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
+        temp_json.id = credential.id || "",
+        temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : "";
     temp_json.response = {
         attestationObject: credential.response.attestationObject
             ? arrayBufferToBase64(credential.response.attestationObject)
@@ -127,10 +127,60 @@ function credentialToJSON(credential) {
             : "",
         // publicKeyAlgorithm: credential.response.publicKeyAlgorithm || -1,
         transports: credential.response.transports || []
-};
+    };
     temp_json.type = credential.type || "public-key";
     return temp_json;
 }
+// 隨機生成顏色
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+// 隨機設定跑馬燈顏色
+function setRandomColor() {
+    const marqueeTexts = document.querySelectorAll('.marquee-text');
+    marqueeTexts.forEach((text) => {
+        text.style.color = getRandomColor(); // 每次顯示時隨機顏色
+    });
+}
+
+// 隨機打亂顯示順序並設置延遲時間
+function setRandomOrder() {
+    const marqueeTexts = document.querySelectorAll('.marquee-text');
+    marqueeTexts.forEach((text) => {
+        const randomDelay = Math.random() * 5; // 隨機延遲，範圍 0-5 秒
+        text.style.animationDelay = `${randomDelay}s`; // 設置隨機延遲
+    });
+}
+
+// 動態生成跑馬燈文字
+function generateMarqueeText(count) {
+    const container = document.querySelector('.marquee-container');
+
+    for (let i = 0; i < count; i++) {
+        const marqueeText = document.createElement('div');
+        marqueeText.classList.add('marquee-text');
+        marqueeText.textContent = 'Ciallo～(∠・ω< )⌒☆'; // 文字內容
+
+        // 隨機設置顏色
+        marqueeText.style.color = getRandomColor();
+
+        // 隨機設置動畫延遲
+        const randomDelay = Math.random() * 20; // 隨機延遲範圍 0-5 秒
+        marqueeText.style.animationDelay = `${randomDelay}s`;
+
+        // 增加複製的文字，使得滾動不會有空白區域
+        // container.appendChild(marqueeText.cloneNode(true)); // 複製一個文字內容，讓文字無縫接續滾動
+        container.appendChild(marqueeText); // 添加一個原始文字
+    }
+}
+
+
 
 // 匯出函式，讓其他程式使用
 export {
@@ -143,4 +193,10 @@ export {
     toggleCollapse,
     hashPassword,
     credentialToJSON,
+    getRandomColor,
+    setRandomColor,
+    setRandomOrder,
+    generateMarqueeText
+
 }
+

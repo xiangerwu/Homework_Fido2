@@ -1,11 +1,9 @@
 .row {
     display: flex;
     align-items: flex-start; /* 讓 `row` 的子元素不受展開影響 */
-   
 }
 .col-md-6-right {
-    width: 120%; /*讓右側擴大 */ 
-   
+    width: 120%; /*讓右側擴大 */
 }
 
 .title-glass-effect-container {
@@ -30,7 +28,7 @@
 
 .container-fluid {
     padding-left: 380px;
-    padding-right:50px;
+    padding-right: 50px;
 }
 
 /* 讓前兩欄有懸浮感 + 毛玻璃 */
@@ -46,7 +44,8 @@
 }
 
 body {
-    background-image: url("https://picsum.photos/1920/1080");
+    /* background-image: url("https://picsum.photos/1920/1080"); */
+    background-color: #00000000;
     background-size: cover;
     /* 讓圖片完整覆蓋畫面 */
     background-position: center center;
@@ -55,15 +54,12 @@ body {
     /* 防止圖片重複 */
     background-attachment: fixed;
     /* 讓背景固定不隨滾動變化 */
-    
-    
 }
 
 .custom-collapse {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease-in-out;
-
 }
 .custom-collapse.show {
     max-height: 1000px; /* 設定較大的值，確保可以展開 */
@@ -73,7 +69,6 @@ body {
 .container-fluid .row {
     gap: 30px; /* 讓左右欄分開，避免太擠 */
 }
-
 
 /* 調整表格字型大小 */
 .table-style {
@@ -117,5 +112,57 @@ body {
         width: 100%; /* 避免毛玻璃區塊變得太窄 */
         max-width: 100%;
         padding: 20px;
+    }
+}
+
+.marquee-container {
+    position: fixed; /* 使跑馬燈不固定 */
+    top: 0;
+    left: 0;
+    width: 100vw; /* 佔據整個視窗寬度 */
+    height: 100vh; /* 佔滿整個視窗高度 */
+    background-color: transparent; /* 背景透明 */
+    overflow: hidden; /* 隱藏超出部分 */
+    z-index: -1; /* 設置為較低的層級，使它位於其他元素之下 */
+    
+}
+
+.marquee-text {
+    display:flex;
+    white-space: nowrap; /* 防止換行 */
+    font-size: 30px; /* 文字大小 */
+    padding: 10px 0;
+    opacity: 0; /* 一開始文字隱藏 */
+    transform: translateX(100vw); /* 一開始從視窗右邊以外開始 */
+    animation: marquee 10s linear infinite, fadeIn 1s ease-in forwards; /* 設定滾動動畫 */
+    animation-fill-mode: forwards; /* 動畫結束後保留動畫結束狀態 */
+    animation-delay: 5s; /* 初始沒有延遲，會在 JS 動態設置 */
+}
+
+/* 每行文字上下分佈 */
+.marquee-text:nth-child(odd) {
+    animation-delay: 0s;
+}
+
+.marquee-text:nth-child(even) {
+    animation-delay: 1s;
+}
+/* 動畫效果，讓文字從右到左滾動 */
+@keyframes marquee {
+    0% {
+        transform: translateX(100vw); /* 開始位置，從右邊開始 */
+    }
+    100% {
+        transform: translateX(-100vw); /* 結束位置，滾動到左邊 */
+    }
+}
+
+/* 顯示文字動畫 */
+@keyframes fadeIn {
+    0% {
+        opacity: 0; /* 開始時文字隱藏 */
+    }
+    100% {
+        opacity: 1; /* 結束時顯示 */
     }
 }
