@@ -7,14 +7,14 @@
         {
             "name": "Python 偵錯工具: Flask",
             "type": "debugpy",
-            "python": "./venv/Scripts/python.exe",
+            // "python": "./venv/bin/python.exe",
             "request": "launch",
             "module": "flask",
             "env": {
                 "FLASK_APP": "app.py",
                 "FLASK_DEBUG": "1"
             },
-            "args": ["run", "--cert=adhoc"],
+            "args": ["run"],
             "jinja": true,
             "autoStartBrowser": false
         }
