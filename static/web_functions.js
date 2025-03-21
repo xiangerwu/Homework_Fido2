@@ -180,6 +180,16 @@ function generateMarqueeText(count) {
     }
 }
 
+// XSS 防護
+function escapeHTML(str) {
+    const element = document.createElement('div');
+    if (str) {
+        element.innerText = str;
+        element.textContent = str;
+    }
+    return element.innerHTML;
+}
+
 
 
 // 匯出函式，讓其他程式使用
@@ -196,7 +206,8 @@ export {
     getRandomColor,
     setRandomColor,
     setRandomOrder,
-    generateMarqueeText
+    generateMarqueeText,
+    escapeHTML
 
 }
 

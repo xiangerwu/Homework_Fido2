@@ -52,7 +52,11 @@ def users():
         users = db.get_all_users()
         for user in users:
             user_list.append(
-                {"id": user[0], "username": user[1], "registeredAt": user[3]}
+                {
+                    "id": user[0],
+                    "username": unsanitize_username(user[1]),
+                    "registeredAt": user[3],
+                }
             )
     return jsonify(user_list)
 

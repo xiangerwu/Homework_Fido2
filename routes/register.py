@@ -19,6 +19,8 @@ from config.global_config import (
     base64url_to_bytes,
     encode_bytes_to_base64,
     db_users,
+    sanitize_username,
+    unsanitize_username,
 )
 
 # 引入 db_manager 自定義模塊
@@ -54,7 +56,7 @@ def register():
     # 取得用戶提交的 JSON 數據
     data = request.json
     # 取得用戶名稱
-    username = data.get("username")
+    username = sanitize_username(data.get("username"))
     # 確認用戶是否存在
     with DatabaseManager(db_users) as db:
         chek_username = db.get_user_name(username)
@@ -112,7 +114,7 @@ def register():
 def store_credential():
     # 取得用戶提交的 JSON
     data = request.json
-    username = data.get("username")
+    username = sanitize_username(data.get("username"))
     debug_log = []
     # 開始存儲憑證流程
     try:

@@ -15,7 +15,8 @@ import {
     getRandomColor,
     setRandomColor,
     setRandomOrder,
-    generateMarqueeText
+    generateMarqueeText,
+    escapeHTML,
 
 } from "./web_functions.js";
 
@@ -308,7 +309,7 @@ async function updateUserList() {
             let row = `
                 <tr>
                     <td>${user.id}</td>
-                    <td>${user.username}</td>
+                    <td>${escapeHTML(user.username) }</td>
                     <td>${user.registeredAt}</td>
                 </tr>
             `;

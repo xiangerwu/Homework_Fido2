@@ -1,5 +1,6 @@
 import base64
 import os
+import html, re
 
 """ Global Variables """
 
@@ -11,16 +12,16 @@ g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 
 # if os.getenv("GAE_ENV", ""):  # 代表 GCP Cloud Run 環境
 # 設定 RP 相關資訊
-RP_ID = "fido2.akitawan.moe"  # 改成你的正式域名
-ORIGIN = "https://fido2.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
+# RP_ID = "fido2.akitawan.moe"  # 改成你的正式域名
+# ORIGIN = "https://fido2.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
 # 設定常用變數
 g_Port = int(os.environ.get("PORT", 8080))  # Render 會自動分配 PORT
 db_users = "/app/Database/fido2_user.db"
 
 # else:  # 本地端使用 SQLite
 #     # 設定 RP 相關資訊
-#     RP_ID = "localhost"  # 改成你的正式域名
-#     ORIGIN = "https://localhost:5000"  # 改成你的正式域名，且使用 HTTPS
+RP_ID = "localhost"  # 改成你的正式域名
+ORIGIN = "https://localhost:5000"  # 改成你的正式域名，且使用 HTTPS
 #     # 設定常用變數
 #     g_Port = int(os.environ.get("PORT", 5000))  # Render 會自動分配 PORT
 #     g_SSL_crt = r"SSL_file\\server.crt"  # 這裡的 SSL_crt 要改成你的 SSL 憑證
@@ -50,3 +51,13 @@ def base64url_to_bytes(base64url_str):
     """將 base64url 字串轉換成 bytes"""
     padding = "=" * (4 - len(base64url_str) % 4)
     return base64.urlsafe_b64decode(base64url_str + padding)
+
+
+# 函數：將 username 轉換為 HTML 實體編碼
+def sanitize_username(username):
+    return html.escape(username)
+
+
+# 函數：將 HTML 實體編碼轉換回正常字符
+def unsanitize_username(safe_username):
+    return html.unescape(safe_username)
