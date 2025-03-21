@@ -1,5 +1,6 @@
 import base64
 import os
+import html, re
 
 """ Global Variables """
 
@@ -14,8 +15,7 @@ RP_ID = "fido2-web.akitawan.moe"  # 改成你的正式域名
 ORIGIN = "https://fido2-web.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
 # 設定常用變數
 db_users = "Database/fido2_user.db"
-g_SSL_crt = r"/etc/ssl/cloudflare/cloudflare-origin.crt"  # 這裡的 SSL_crt 要改成你的 SSL 憑證
-g_SSL_key = r"/etc/ssl/cloudflare/cloudflare-origin.key"  # 這裡的 SSL_key 要改成你的 SSL 金鑰
+
 
 """ General Functions """
 
@@ -40,3 +40,13 @@ def base64url_to_bytes(base64url_str):
     """將 base64url 字串轉換成 bytes"""
     padding = "=" * (4 - len(base64url_str) % 4)
     return base64.urlsafe_b64decode(base64url_str + padding)
+
+
+# 函數：將 username 轉換為 HTML 實體編碼
+def sanitize_username(username):
+    return html.escape(username)
+
+
+# 函數：將 HTML 實體編碼轉換回正常字符
+def unsanitize_username(safe_username):
+    return html.unescape(safe_username)

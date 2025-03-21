@@ -50,7 +50,8 @@ def update_database(db_file):
             CREATE TABLE Users_Session (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 User_name TEXT NOT NULL UNIQUE,
-                Session BLOB
+                Session BLOB,
+                 timestamp INTEGER
             )
         """
         )

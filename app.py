@@ -18,7 +18,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 
 # 設定 CORS 跨域請求
 # if os.getenv("GAE_ENV", ""):
-CORS(app, origins=["https://akitawan.moe", "https://fido2_web.akitawan.moe"])
+CORS(app, origins=["https://akitawan.moe", "https://fido2-web.akitawan.moe"])
 # else:
 #     CORS(app, ORIGIN="*", supports_credentials=True)
 
@@ -52,7 +52,11 @@ def users():
         users = db.get_all_users()
         for user in users:
             user_list.append(
-                {"id": user[0], "username": user[1], "registeredAt": user[3]}
+                {
+                    "id": user[0],
+                    "username": unsanitize_username(user[1]),
+                    "registeredAt": user[3],
+                }
             )
     return jsonify(user_list)
 

@@ -21,6 +21,8 @@ from config.global_config import (
     encode_bytes_to_base64,
     base64url_to_bytes,
     db_users,
+    sanitize_username,
+    unsanitize_username,
 )
 
 # 引入 db_manager 自定義模塊
@@ -55,13 +57,13 @@ auth_bp = Blueprint("auth", __name__)
 def verify_register():
     # 取得用戶提交的 JSON 數據，並檢查用戶名稱
     data = request.json
-    username = data.get("username")
+    username = sanitize_username(data.get("username"))
     if not username:
         return jsonify({"error": "請提供使用者名稱"}), 400
     try:
         # 檢查資料是否有效，並取得使用者註冊資料(後端)或錯誤回傳
         with DatabaseManager(db_users) as db:
-            server_credential_data = db.get_credential(data.get("username"))[0]
+            server_credential_data = db.get_credential(username)[0]
         if not server_credential_data:
             return jsonify({"error": "用戶註冊憑證不存在"}), 400
 
@@ -114,7 +116,7 @@ def verify_credential():
     debug_log = []
     # 取得用戶提交的 JSON 數據
     data = request.json
-    username = data.get("username")
+    username = sanitize_username(data.get("username"))
     if not username:
         return jsonify({"error": "請提供使用者名稱"}), 400
     # 驗證憑證流程
@@ -230,7 +232,7 @@ def verify_credential():
 def Login_Log(username, request, authenticator_type, status):
     try:
         user_agent = parse(request.headers.get("User-Agent"))
-        user_ip = request.remote_addr
+        user_ip = request.headers.get("CF-Connecting-IP") or request.remote_addr
         user_device = user_agent.device.family
         # 判斷是不是手機
         device_types = {
@@ -263,7 +265,7 @@ def Login_Log(username, request, authenticator_type, status):
 # 獲取用戶登入紀錄
 @auth_bp.route("user-log", methods=["POST"])
 def get_user_login_log():
-    username = request.json.get("username")
+    username = sanitize_username(request.json.get("username"))
     user_record = []
     try:
         with DatabaseManager(db_users) as db:
@@ -271,7 +273,7 @@ def get_user_login_log():
             for record in user_log:
                 user_record.append(
                     {
-                        "username": record[1],
+                        "username": unsanitize_username(record[1]),
                         "authenticator": record[2],
                         "ip": record[3],
                         "os": record[4],

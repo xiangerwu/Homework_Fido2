@@ -101,36 +101,39 @@ async function hashPassword(password) {
 
 
 // 將憑證轉換為 JSON 格式
+
 function credentialToJSON(credential) {
     if (!credential) return null;
     // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
     let temp_json = Object.assign({}, credential);
     temp_json.authenticatorAttachment = credential.authenticatorAttachment || null,
-        temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
-        temp_json.id = credential.id || "",
-        temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : "";
-    temp_json.response = {
-        attestationObject: credential.response.attestationObject
-            ? arrayBufferToBase64(credential.response.attestationObject)
-            : "",
-        authenticatorData: credential.response.authenticatorData
-            ? arrayBufferToBase64(credential.response.authenticatorData)
-            : "",
-        clientDataJSON: credential.response.clientDataJSON
-            ? arrayBufferToBase64(credential.response.clientDataJSON)
-            : "",
-        signature: credential.response.signature
-            ? arrayBufferToBase64(credential.response.signature)
-            : "",
-        publicKey: credential.response.publicKey
-            ? arrayBufferToBase64(credential.response.publicKey)
-            : "",
-        // publicKeyAlgorithm: credential.response.publicKeyAlgorithm || -1,
-        transports: credential.response.transports || []
-    };
+    temp_json.clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
+    temp_json.id = credential.id || "",
+    temp_json.rawId = credential.rawId ? arrayBufferToBase64(credential.rawId) : "";
+    const response_key = [
+        "attestationObject",
+        "authenticatorData",
+        "clientDataJSON",
+        "signature",
+        "publicKey",
+    ];
+    temp_json.response = {};
+    for (let key of response_key) {
+        temp_json.response[key] = credential.response[key] ? arrayBufferToBase64(credential.response[key]) : "";
+    }
+    temp_json.response.transports = credential.response.transports || [];
     temp_json.type = credential.type || "public-key";
     return temp_json;
 }
+// 如果是 ios-safari 將憑證轉換為 JSON 格式 否則直接使用
+function convertCredential(credential, useragent) {
+    let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
+    let credential_JSON = null;
+    if (check_ios === true) { credential_JSON = credentialToJSON(credential); }
+    else { credential_JSON = credential; }
+    return credential_JSON;
+}
+
 // 隨機生成顏色
 function getRandomColor() {
     const letters = '0123456789ABCDEF';
@@ -180,6 +183,16 @@ function generateMarqueeText(count) {
     }
 }
 
+// XSS 防護
+function escapeHTML(str) {
+    const element = document.createElement('div');
+    if (str) {
+        element.innerText = str;
+        element.textContent = str;
+    }
+    return element.innerHTML;
+}
+
 
 
 // 匯出函式，讓其他程式使用
@@ -196,7 +209,8 @@ export {
     getRandomColor,
     setRandomColor,
     setRandomOrder,
-    generateMarqueeText
-
+    generateMarqueeText,
+    escapeHTML,
+    convertCredential
 }
 
