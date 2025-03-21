@@ -3,7 +3,6 @@
 from config.global_config import db_users
 import sqlite3
 
-
 # 如何 import 這個 class：  from config.db_manager import DatabaseManager
 # 如何呼叫 class：          with DatabaseManager(db_users) as db:
 class DatabaseManager:
@@ -63,7 +62,7 @@ class DatabaseManager:
     # 新增用戶，無回傳
     def insert_user(self, username, Credential):
         try:
-            query = "INSERT INTO Users_List (User_name, Credential) VALUES (?, ?);"
+            query = "INSERT INTO Users_List (User_name, Credential,RegisteredAt) VALUES (?, ?,DATETIME('now', 'localtime'));"
             return self.execute_query(query, (username, Credential), commit=True)
         except Exception as e:
             raise Exception(f"Error inserting user: {e}")
@@ -109,7 +108,7 @@ class DatabaseManager:
     # 新增使用者 session，無回傳
     def insert_session(self, username, session):
         try:
-            query = "INSERT INTO Users_Session (User_name, Session) VALUES (?, ?);"
+            query = "INSERT INTO Users_Session (User_name, Session,timestamp) VALUES (?, ?, STRFTIME('%s','now'));"
             return self.execute_query(query, (username, session), commit=True)
         except Exception as e:
             raise Exception(f"Error inserting session: {e}")
@@ -138,6 +137,14 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Error deleting session: {e}")
 
+    # 清除過期 session，無回傳
+    def clear_expired_sessions(self, expiry_seconds):
+        try:
+            query = "DELETE FROM Users_Session WHERE timestamp <  (STRFTIME('%s','now') - ?);"
+            return self.execute_query(query, (expiry_seconds,), commit=True)
+        except Exception as e:
+            raise Exception(f"Error clearing expired sessions: {e}")
+        
     # 刪除用戶，無回傳
     def delete_user(self, username):
         try:

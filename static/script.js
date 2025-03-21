@@ -12,11 +12,11 @@ import {
     toggleCollapse,
     hashPassword,
     credentialToJSON,
-    getRandomColor,
     setRandomColor,
     setRandomOrder,
     generateMarqueeText,
     escapeHTML,
+    convertCredential,
 
 } from "./web_functions.js";
 
@@ -29,7 +29,7 @@ window.toggleCollapse = toggleCollapse;
 
 
 // 根據當前主機來設置不同的 URL
-window.direct_url = "https://fido2.akitawan.moe"; // 上線環境
+window.direct_url = "https://localhost:5000"; // 上線環境
 
 // 函式名稱: sendRequest
 // 作用: 向後端發送請求
@@ -89,17 +89,8 @@ async function register() {
         // 顯示憑證資訊在網頁上
         // 組合憑證資料 (username, credential)
         console.log("將憑證資料傳送到後端");
-        // 如果是 ios-safari
-        var store_credential = null;
-        let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
-        if (check_ios === true) {
-            let credential_JSON = null;
-            credential_JSON =  credentialToJSON(credential);
-            store_credential = { username: username, credential: credential_JSON, };
-        }
-        else {
-            store_credential = { username: username, credential: credential, };
-        }
+    
+        let store_credential = { username: username, credential: convertCredential(credential, navigator.userAgent)} ;
 
         showMessage(
             "Register_credentialInfo",
@@ -188,18 +179,8 @@ async function verify_register() {
 
         // 第三步: 將憑證傳給後端完成登入
         console.log("3.將憑證傳給後端完成登入");
-
-        // 如果是 ios-safari
-        var verify_credential = null;
-        let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
-        if (check_ios === true) {
-            let credential_JSON = null;
-            credential_JSON = credentialToJSON(credential);
-            verify_credential = { username: username, credential: credential_JSON, };
-        }
-        else {
-            verify_credential = { username: username, credential: credential, };
-        }
+ 
+        let verify_credential = { username: username, credential: convertCredential(credential,navigator.userAgent), };
         // 將認證結果傳送給後端進行驗證
         const verifyResult = await sendRequest("/auth/verify-credential", "POST", verify_credential);
 
@@ -295,7 +276,6 @@ async function updateUserList() {
         // 發送 GET 請求到後端 API
         const response = await fetch(window.direct_url + "/users");
 
-
         // 確保回應成功
         if (!response.ok) {
             throw new Error(`HTTP 錯誤！狀態碼: ${response.status}`);
@@ -306,14 +286,25 @@ async function updateUserList() {
 
         // 迭代用戶數據，填充表格
         users.forEach(user => {
-            let row = `
-                <tr>
-                    <td>${user.id}</td>
-                    <td>${escapeHTML(user.username) }</td>
-                    <td>${user.registeredAt}</td>
-                </tr>
-            `;
-            userList.innerHTML += row;
+            let row = document.createElement('tr');
+
+            // ID 欄位
+            let tdId = document.createElement('td');
+            tdId.textContent = user.id; // 使用 textContent 防止 XSS
+            row.appendChild(tdId);
+
+            // Username 欄位
+            let tdUsername = document.createElement('td');
+            tdUsername.textContent = user.username; // 使用 textContent 防止 HTML 解析
+            row.appendChild(tdUsername);
+
+            // RegisteredAt 欄位
+            let tdRegisteredAt = document.createElement('td');
+            tdRegisteredAt.textContent = user.registeredAt; // 使用 textContent 防止 XSS
+            row.appendChild(tdRegisteredAt);
+
+            // 加入整行
+            userList.appendChild(row);
         });
     } catch (error) {
         console.error("獲取使用者列表時發生錯誤:", error);

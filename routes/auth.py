@@ -63,7 +63,7 @@ def verify_register():
     try:
         # 檢查資料是否有效，並取得使用者註冊資料(後端)或錯誤回傳
         with DatabaseManager(db_users) as db:
-            server_credential_data = db.get_credential(data.get("username"))[0]
+            server_credential_data = db.get_credential(username)[0]
         if not server_credential_data:
             return jsonify({"error": "用戶註冊憑證不存在"}), 400
 

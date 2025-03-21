@@ -18,7 +18,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 
 # 設定 CORS 跨域請求
 # if os.getenv("GAE_ENV", ""):
-CORS(app, origins=["https://akitawan.moe", "https://fido2.akitawan.moe"])
+CORS(app, origins=["https://akitawan.moe", "https://fido2-web.akitawan.moe"])
 # else:
 #     CORS(app, ORIGIN="*", supports_credentials=True)
 
@@ -99,16 +99,6 @@ if __name__ == "__main__":
     app.register_blueprint(register_bp, url_prefix="/register")
     # 用於驗證的路由
     app.register_blueprint(auth_bp, url_prefix="/auth")
-    # 判斷運行環境是不是本地，如果是本地則使用 SSL 憑證
-    # if os.getenv("GAE_ENV", ""):
-    #     print("Running on Cloud Run")
 
-    app.run(
-        host=g_IP,
-        port=g_Port,
-        debug=True,
-    )
-    # else:
-    #     print("Running on Local")
-    #     # 設定 IP 與 Port、啟用 debug 模式
-    #     app.run(host=g_IP, port=g_Port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
+    app.run(host=g_IP, port=g_port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
+    # app.run(host=g_IP, port=g_port, debug=True)

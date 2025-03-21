@@ -4,19 +4,17 @@ import html, re
 
 """ Global Variables """
 
-# 在 Cloud Run 上使用 /app/Database/fido2_user.db
 
 g_IP = "0.0.0.0"  # Flask 在 Render 上應該綁定所有 IP
 RP_NAME = "My WebAuthn App"  # 可保持不變，或改成你的應用名稱
 g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
+g_port = 5000  # 預設 Flask 埠號
 
-# if os.getenv("GAE_ENV", ""):  # 代表 GCP Cloud Run 環境
 # 設定 RP 相關資訊
 # RP_ID = "fido2.akitawan.moe"  # 改成你的正式域名
 # ORIGIN = "https://fido2.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
 # 設定常用變數
-g_Port = int(os.environ.get("PORT", 8080))  # Render 會自動分配 PORT
-db_users = "/app/Database/fido2_user.db"
+db_users = "Database/fido2_user.db"
 
 # else:  # 本地端使用 SQLite
 #     # 設定 RP 相關資訊
@@ -24,8 +22,8 @@ RP_ID = "localhost"  # 改成你的正式域名
 ORIGIN = "https://localhost:5000"  # 改成你的正式域名，且使用 HTTPS
 #     # 設定常用變數
 #     g_Port = int(os.environ.get("PORT", 5000))  # Render 會自動分配 PORT
-#     g_SSL_crt = r"SSL_file\\server.crt"  # 這裡的 SSL_crt 要改成你的 SSL 憑證
-#     g_SSL_key = r"SSL_file\\server.key"  # 這裡的 SSL_key 要改成你的 SSL 金鑰
+g_SSL_crt = r"SSL_file\\server.crt"  # 這裡的 SSL_crt 要改成你的 SSL 憑證
+g_SSL_key = r"SSL_file\\server.key"  # 這裡的 SSL_key 要改成你的 SSL 金鑰
 #     db_users = "Database/fido2_user.db"
 
 """ General Functions """
