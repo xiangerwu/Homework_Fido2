@@ -1,11 +1,14 @@
 import base64
 import os
 import html, re
+import jwt
+import datetime
 
 """ Global Variables """
 
 
 g_IP = "0.0.0.0"  # Flask 在 Render 上應該綁定所有 IP
+# g_IP = "127.0.0.1"
 RP_NAME = "My WebAuthn App"  # 可保持不變，或改成你的應用名稱
 g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 g_port = 5000  # 預設 Flask 埠號
@@ -18,7 +21,6 @@ db_users = "Database/fido2_user.db"
 
 
 """ General Functions """
-
 
 # 函式名稱: encode_bytes_to_base64
 # 作用: 遞歸將 bytes 類型轉換為 Base64 字串，確保 JSON 序列化
@@ -50,3 +52,41 @@ def sanitize_username(username):
 # 函數：將 HTML 實體編碼轉換回正常字符
 def unsanitize_username(safe_username):
     return html.unescape(safe_username)
+
+
+# 函數：產生 JWT Token
+def generate_jwt(
+    username: str,
+    aaguid: str = None,
+    sign_count: int = None,
+    role: str = "user",
+    expire_minutes: int = 60,
+) -> str:
+    """
+    產生 JWT Token
+
+    參數:
+        username (str): 使用者識別 ID
+        aaguid (str): FIDO2 裝置的識別碼（可選）
+        sign_count (int): FIDO2 裝置的簽名計數器（可選）
+        role (str): 使用者權限（預設為 'user'）
+        expire_minutes (int): Token 有效時間（分鐘）
+
+    回傳:
+        str: JWT 字串（已簽章）
+    """
+    now = datetime.datetime.utcnow()
+    payload = {
+        "sub": username,
+        "role": role,
+        "iat": now,
+        "exp": now + datetime.timedelta(minutes=expire_minutes),
+    }
+
+    if aaguid:
+        payload["aaguid"] = aaguid
+    if sign_count is not None:
+        payload["signCount"] = sign_count
+
+    token = jwt.encode(payload, g_secret_key, algorithm="HS256")
+    return token

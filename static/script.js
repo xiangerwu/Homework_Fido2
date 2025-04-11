@@ -44,6 +44,7 @@ async function sendRequest(url, method, data) {
         // credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include", // 這行是讓 cookie 可以傳送到後端
     });
     return response.json();
 }
@@ -202,6 +203,7 @@ async function verify_register() {
         // 顯示登入紀錄  
         const user_log = await sendRequest("/auth/user-log", "POST", { username });
         console.log("user_log:", user_log);
+        
         showLoginHistory(username, user_log);
 
     } catch (error) {
