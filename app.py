@@ -18,10 +18,9 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 
 # 設定 CORS 跨域請求
 # if os.getenv("GAE_ENV", ""):
-CORS(app, origins=["https://akitawan.moe", "https://fido2-web.akitawan.moe"])
+# CORS(app, origins=["https://akitawan.moe", "https://fido2-web.akitawan.moe"])
 # else:
-#     CORS(app, ORIGIN="*", supports_credentials=True)
-
+CORS(app, origins=ORIGIN, supports_credentials=True)
 # 設定 SSL
 sslify = SSLify(app)
 

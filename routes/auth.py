@@ -11,7 +11,7 @@
 import os, json
 
 # 引入 flask 模塊
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, make_response
 
 # 引入 global_config 自定義模塊
 from config.global_config import (
@@ -23,6 +23,7 @@ from config.global_config import (
     db_users,
     sanitize_username,
     unsanitize_username,
+    generate_jwt,
 )
 
 # 引入 db_manager 自定義模塊
@@ -207,14 +208,36 @@ def verify_credential():
         # 成功驗證後，記錄登入資訊到 Users_Log
         User_Log = Login_Log(username, request, authenticator_type, 1)
 
+        # 產生 JWT Token
+        JWT_Token = None
+        if auth_result:
+            JWT_Token = generate_jwt(
+                username=username,
+                aaguid=auth_result.credential.aaguid.hex(),
+                sign_count=parsed_auth_data.counter,
+                role="user",
+                expire_minutes=60,
+            )
+
         # 回傳成功訊息
-        return jsonify(
-            {
-                "status": "ok",
-                "message": "成功認證",
-                "signCount": parsed_auth_data.counter,
-            }
+        response = make_response(
+            jsonify(
+                {
+                    "status": "ok",
+                    "message": "成功認證",
+                    "signCount": parsed_auth_data.counter,
+                }
+            )
         )
+        response.set_cookie(
+            key="token",
+            value=JWT_Token,
+            httponly=True,  # 防止 JavaScript 存取（防止 XSS）
+            secure=True,  # 僅 HTTPS 傳送（防止 MITM）
+            samesite="Strict",  # 防止 CSRF
+            max_age=3600,  # Token 有效時間（秒）
+        )
+        return response
     # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息
