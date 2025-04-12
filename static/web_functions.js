@@ -101,7 +101,6 @@ async function hashPassword(password) {
 
 
 // 將憑證轉換為 JSON 格式
-
 function credentialToJSON(credential) {
     if (!credential) return null;
     // **用 Object.assign() 創建新物件，避免直接讀取 `credential` 屬性**
@@ -125,6 +124,8 @@ function credentialToJSON(credential) {
     temp_json.type = credential.type || "public-key";
     return temp_json;
 }
+
+
 // 如果是 ios-safari 將憑證轉換為 JSON 格式 否則直接使用
 function convertCredential(credential, useragent) {
     let check_ios = /iP(ad|hone|od).+Version\/[\d.]+.*Safari/i.test(navigator.userAgent);
@@ -133,6 +134,7 @@ function convertCredential(credential, useragent) {
     else { credential_JSON = credential; }
     return credential_JSON;
 }
+
 
 // 隨機生成顏色
 function getRandomColor() {
@@ -144,6 +146,7 @@ function getRandomColor() {
     return color;
 }
 
+
 // 隨機設定跑馬燈顏色
 function setRandomColor() {
     const marqueeTexts = document.querySelectorAll('.marquee-text');
@@ -151,6 +154,7 @@ function setRandomColor() {
         text.style.color = getRandomColor(); // 每次顯示時隨機顏色
     });
 }
+
 
 // 隨機打亂顯示順序並設置延遲時間
 function setRandomOrder() {
@@ -160,6 +164,7 @@ function setRandomOrder() {
         text.style.animationDelay = `${randomDelay}s`; // 設置隨機延遲
     });
 }
+
 
 // 動態生成跑馬燈文字
 function generateMarqueeText(count) {
@@ -183,6 +188,7 @@ function generateMarqueeText(count) {
     }
 }
 
+
 // XSS 防護
 function escapeHTML(str) {
     const element = document.createElement('div');
@@ -192,6 +198,7 @@ function escapeHTML(str) {
     }
     return element.innerHTML;
 }
+
 
 
 

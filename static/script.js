@@ -25,6 +25,7 @@ window.register = register;
 window.verify_register = verify_register;
 window.clearData = clearData;
 window.toggleCollapse = toggleCollapse;
+window.logout = logout;
 
 
 
@@ -41,7 +42,6 @@ async function sendRequest(url, method, data) {
     const response = await fetch(
         window.direct_url + url, {
         method: method,
-        // credentials: 'include',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include", // 這行是讓 cookie 可以傳送到後端
@@ -201,10 +201,9 @@ async function verify_register() {
             "\n登入計數：" + verifyResult.signCount + " 次"
         );
         // 顯示登入紀錄  
-        const user_log = await sendRequest("/auth/user-log", "POST", { username });
-        console.log("user_log:", user_log);
-        
-        showLoginHistory(username, user_log);
+       
+        showLoginHistory(username);
+        location.reload();
 
     } catch (error) {
         // 網路錯誤處理
@@ -268,6 +267,33 @@ async function clearData() {
 // 頁面載入時獲取使用者名單
 document.addEventListener("DOMContentLoaded", updateUserList);
 
+// 轉換特殊文字名稱
+function htmlUnescape(str) {
+    const div = document.createElement("div");
+    div.innerHTML = str;
+    return div.textContent;
+}
+
+// 取得如果後端偵測到登入狀態，則顯示登入狀態
+window.addEventListener("DOMContentLoaded", () => {
+    // JWT 存在並且驗證成功
+    if (currentUser) {
+        const span = document.getElementById("welcomeUsername");
+        // 顯示登入後的頁面
+        document.getElementById("dashboard").style.display = "block";
+        // 隱藏登入頁面
+        const rows = document.getElementsByClassName("row");
+        for (let i = 0; i < rows.length; i++) {
+            rows[i].style.display = "none";
+        }
+        const username_raw = htmlUnescape(currentUser.sub)
+        // 顯示使用者名稱
+        span.innerText = ` ${username_raw}`;
+        // 顯示登入紀錄
+        showLoginHistory(username_raw);        
+    } 
+});
+
 
 // 從後端獲取使用者列表並更新表格
 async function updateUserList() {
@@ -316,10 +342,13 @@ async function updateUserList() {
 
 
 // 顯示登入紀錄
-async function showLoginHistory(username, userdata) {
+async function showLoginHistory(username) {
     const loginHistorySection = document.getElementById("loginHistorySection");
     const loginHistoryTitle = document.getElementById("loginHistoryTitle");
     const loginHistory = document.getElementById("loginHistory");
+
+    const userdata = await sendRequest("/auth/user-log", "POST", { username });
+    console.log("user_log:", userdata);
 
     // 更新標題
     loginHistoryTitle.innerText = `${username} 的登入紀錄`;
@@ -373,11 +402,18 @@ window.onload = function () {
 //     setRandomOrder();  // 每 5 秒打亂顯示順序
 // }, 1000);
 
+async function logout(){
+    // 清除 cookie
+    const options = await sendRequest("/logout", "POST");
+    // 重整頁面
+    location.reload();
+}
 
 // export 函式
 export {
     register,
     verify_register,
     clearData,
+    logout,
 }
 

@@ -6,6 +6,34 @@
     width: 120%; /*讓右側擴大 */
 }
 
+.welcome-bg {
+  position: relative;
+  background-image: url("/static/images/welcome.gif");
+  background-size: auto;
+  background-position: left center;
+  background-repeat: no-repeat;
+  height: 200px; /* 可依需求調整 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* .bg-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4); /* 可改深淺 */
+  /* z-index: 0; */
+/* } */ 
+
+.welcome-text {
+  position: relative;
+  z-index: 1;
+  color: white;
+  text-align: center;
+}
+
+
 .title-glass-effect-container {
     text-align: center; /* 讓 inline-block 元素置中 */
 }

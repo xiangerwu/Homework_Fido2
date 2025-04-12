@@ -1,6 +1,6 @@
 from config.global_config import *
 from Database.db_manager import DatabaseManager
-from flask import Flask, render_template, jsonify, request, redirect
+from flask import Flask, render_template, jsonify, request, redirect, make_response
 from flask_cors import CORS
 from flask_sslify import SSLify
 from fido2.server import Fido2Server
@@ -39,8 +39,9 @@ def home():
 
 # 主要測試頁面
 @app.route("/main")
+@attach_jwt_if_available
 def main():
-    return render_template("index.html")
+    return render_template("index.html", user=request.jwt_payload)
 
 
 # 取得所有用戶資料
@@ -58,6 +59,14 @@ def users():
                 }
             )
     return jsonify(user_list)
+
+
+# 登出
+@app.route("/logout", methods=["POST"])
+def logout():
+    response = make_response(jsonify({"message": "登出成功"}))
+    response.set_cookie("token", "", max_age=0, httponly=True, secure=True, samesite="Strict")
+    return response
 
 
 # 清除測試用戶資料

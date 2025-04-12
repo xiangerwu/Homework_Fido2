@@ -213,12 +213,12 @@ def verify_credential():
         if auth_result:
             JWT_Token = generate_jwt(
                 username=username,
-                aaguid=auth_result.credential.aaguid.hex(),
+                aaguid=attested_data.aaguid.hex(),
                 sign_count=parsed_auth_data.counter,
                 role="user",
                 expire_minutes=60,
             )
-
+        # print("\nJWT_Token:\n", JWT_Token)
         # 回傳成功訊息
         response = make_response(
             jsonify(

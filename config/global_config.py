@@ -3,6 +3,9 @@ import os
 import html, re
 import jwt
 import datetime
+from functools import wraps
+from flask import request
+
 
 """ Global Variables """
 
@@ -90,3 +93,42 @@ def generate_jwt(
 
     token = jwt.encode(payload, g_secret_key, algorithm="HS256")
     return token
+
+# 函數：檢查 JWT Token 是否有效
+def decode_jwt(token: str):
+    """
+    解碼 JWT Token
+
+    參數:
+        token (str): JWT 字串（已簽章）
+
+    回傳:
+        dict: 解碼後的 payload
+        str: 錯誤訊息（如果有的話）
+    """
+    try:
+        payload = jwt.decode(token, g_secret_key, algorithms=["HS256"])
+        return payload,None # 解碼成功，回傳 Payload 字典
+    except jwt.ExpiredSignatureError:
+        return None, str("Token 已過期")
+    except jwt.InvalidTokenError :
+        return None, str("無效的 Token") 
+        
+    
+# 函數：檢查 JWT Token 是否存在
+def attach_jwt_if_available(f):
+    @wraps(f) # 確保原始函數的元資料不會被覆蓋
+    # @wraps(f) 是一個裝飾器，用來保留原始函數的元資料
+    # (例如函數名稱、文檔字串等)，這樣在調試或使用函數時，可以獲得正確的資訊。
+    # 當你使用裝飾器來包裝一個函數時，
+    # 原始函數的名稱、文檔字串等資訊不會被改變。
+    def wrapper(*args, **kwargs): 
+        token = request.cookies.get("token")
+        payload ,jwt_error= decode_jwt(token) if token else (None,None) # 嘗試解碼 JWT Token
+        # 如果 token 不存在，payload 會是 None
+        # 如果 token 存在但無效，payload 會是 None
+        # 如果 token 存在且有效，payload 會是字典
+        request.jwt_payload = payload # 若有合法 JWT 就會變成 dict，否則是 None
+        request.jwt_error = jwt_error # 如果有錯誤，則會是錯誤訊息
+        return f(*args, **kwargs)
+    return wrapper    
