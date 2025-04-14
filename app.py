@@ -34,14 +34,52 @@ app.secret_key = g_secret_key
 # 首頁
 @app.route("/")
 def home():
-    return """Hello, World! <a href="/main">點擊進入 WebAuthn 環節</a>"""
+    return """
+    <!DOCTYPE html>
+    <html lang="zh-TW">
+    <head>
+      <meta charset="UTF-8">
+      <title>首頁</title>
+      <script>
+        function openOAuthPopup() {
+          const popup = window.open(
+            "/oauth/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123",
+            "oauth_popup",
+            "width=500,height=600"
+          );
 
+          window.addEventListener("message", (event) => {
+            // 建議加上 origin 驗證
+            console.log("收到 popup 回傳資料：", event.data);
+
+            if (event.data.token) {
+              alert("登入成功！收到 Token: " + event.data.token);
+              // 可以儲存到 localStorage 或觸發登入邏輯
+            }
+          });
+        }
+      </script>
+    </head>
+    <body>
+      <h1>Hello, World!</h1>
+      <p><a href="/main">點擊進入 WebAuthn 環節</a></p>
+      <p><a href="#" onclick="openOAuthPopup(); return false;">點擊進入 OAuth 環節（彈出視窗）</a></p>
+    </body>
+    </html>
+    """
 
 # 主要測試頁面
 @app.route("/main")
 @attach_jwt_if_available
 def main():
-    return render_template("index.html", user=request.jwt_payload)
+    print("✅ JWT Payload:", request.jwt_payload)
+    print("❎ JWT Error:", request.jwt_error)
+    return render_template("index.html", user=request.jwt_payload, user_error = request.jwt_error)
+
+# 測試 oauth
+@app.route("/oauth")
+def oauth():
+    return render_template("oauth_login.html")
 
 
 # 取得所有用戶資料
@@ -102,11 +140,14 @@ if __name__ == "__main__":
     # 引入拆分的路由
     from routes.register import register_bp
     from routes.auth import auth_bp
-
+    from routes.oauth import oauth_bp
     # 用於註冊的路由
     app.register_blueprint(register_bp, url_prefix="/register")
     # 用於驗證的路由
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    # 用於 OAuth 的路由
+    app.register_blueprint(oauth_bp, url_prefix="/oauth")
+    
 
     # app.run(host=g_IP, port=g_port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
     app.run(host=g_IP, port=g_port, debug=True)

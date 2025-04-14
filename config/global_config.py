@@ -2,9 +2,11 @@ import base64
 import os
 import html, re
 import jwt
-import datetime
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from functools import wraps
 from flask import request
+
 
 
 """ Global Variables """
@@ -78,12 +80,17 @@ def generate_jwt(
     回傳:
         str: JWT 字串（已簽章）
     """
-    now = datetime.datetime.utcnow()
+    # 取得當前時間
+    now = datetime.now(timezone.utc)
+    exp = now + timedelta(minutes=60)
+
+    # 產生 JWT Token 的 payload  
     payload = {
         "sub": username,
         "role": role,
-        "iat": now,
-        "exp": now + datetime.timedelta(minutes=expire_minutes),
+        "iat": int(now.timestamp()),  # 簽發時間
+        "exp": int(exp.timestamp()),  # 到期時間
+        "iss": ORIGIN,  # 發行者
     }
 
     if aaguid:
@@ -107,12 +114,20 @@ def decode_jwt(token: str):
         str: 錯誤訊息（如果有的話）
     """
     try:
-        payload = jwt.decode(token, g_secret_key, algorithms=["HS256"])
+        payload = jwt.decode(token, g_secret_key, algorithms=["HS256"],issuer=ORIGIN)
         return payload,None # 解碼成功，回傳 Payload 字典
     except jwt.ExpiredSignatureError:
         return None, str("Token 已過期")
     except jwt.InvalidTokenError :
         return None, str("無效的 Token") 
+    except jwt.InvalidSignatureError:
+        return None, str("無效的簽名")
+    except jwt.DecodeError:
+        return None, str("解碼錯誤")
+    except jwt.InvalidIssuerError:
+        return None, str("無效的發行者")
+    except Exception as e:
+        return None, str(f"其他錯誤: {e}")
         
     
 # 函數：檢查 JWT Token 是否存在
@@ -123,12 +138,18 @@ def attach_jwt_if_available(f):
     # 當你使用裝飾器來包裝一個函數時，
     # 原始函數的名稱、文檔字串等資訊不會被改變。
     def wrapper(*args, **kwargs): 
+        # 從請求的 cookies 中獲取 JWT Token        
         token = request.cookies.get("token")
-        payload ,jwt_error= decode_jwt(token) if token else (None,None) # 嘗試解碼 JWT Token
+        # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
         # 如果 token 存在但無效，payload 會是 None
         # 如果 token 存在且有效，payload 會是字典
-        request.jwt_payload = payload # 若有合法 JWT 就會變成 dict，否則是 None
-        request.jwt_error = jwt_error # 如果有錯誤，則會是錯誤訊息
+        payload ,jwt_error= decode_jwt(token) if token else (None,None) 
+        
+        # 若有合法 JWT 就會變成 dict，否則是 None
+        request.jwt_payload = payload 
+        # 如果有錯誤，則會是錯誤訊息
+        request.jwt_error = jwt_error 
+
         return f(*args, **kwargs)
     return wrapper    

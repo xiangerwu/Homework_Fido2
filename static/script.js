@@ -26,6 +26,7 @@ window.verify_register = verify_register;
 window.clearData = clearData;
 window.toggleCollapse = toggleCollapse;
 window.logout = logout;
+window.oauth_login = oauth_login;
 
 
 
@@ -264,6 +265,80 @@ async function clearData() {
 } // end of clear()
 
 
+// OAuth 登入函式
+// 這個函式會在 OAuth 登入頁面中被呼叫
+// 它會向後端發送登入請求，並獲取 JWT token
+// 然後將 token 傳回主頁面
+async function oauth_login() {
+    const username = document.getElementById("username").value;
+    if (!username) {
+        alert("請輸入使用者名稱");
+        return;
+    }
+
+    try {
+        // 第一步: 向後端確認使用者存在
+        // 傳送使用者名稱到後端
+        const options = await sendRequest("/auth", "POST", { username });
+
+        // 取得回應後顯示在主控台
+        console.log("後端回應:", options);
+
+        if (options.error) {
+            console.error("認證錯誤(後端回應 error):", options.error);
+            alert("認證失敗(後端回應 error):" + options.error + "！");
+            return;
+        }
+        // 如果後端回應沒有錯誤，則繼續執行下一步
+
+        // 第二步: 從瀏覽器取得憑證
+        console.log("2.後端回傳使用者資料再從瀏覽器取得憑證");
+        // 轉換 base64url 字串為 Uint8Array 格式
+        options.publicKey.challenge = base64UrlToUint8Array(options.publicKey.challenge);
+        options.publicKey.allowCredentials = options.publicKey.allowCredentials.map((cred) => ({
+            id: base64UrlToUint8Array(cred.id), // 轉換 base64url 字串為 Uint8Array 格式
+            type: cred.type,
+        }));
+        // 呼叫瀏覽器 API 認證憑證
+        // console.log("options:", options);
+        const credential = await navigator.credentials.get(options);
+ 
+        let verify_credential = { username: username, credential: convertCredential(credential, navigator.userAgent), };
+        // 將認證結果傳送給後端進行驗證
+        const verifyResult = await sendRequest("/auth/verify-credential", "POST", verify_credential);
+        // 顯示驗證結果
+        console.log("登入驗證結果:", verifyResult);
+
+        if (verifyResult.error) {
+            console.error("登入驗證錯誤:", verifyResult.error);
+            return;
+        }
+        // 嘗試從 cookie 取出 token
+        const token = getCookie("token");
+        if (token) {
+            window.opener.postMessage({ token }, "*");
+            console.log("傳送 token:", token);
+            window.close();
+        } else {
+            alert("找不到登入憑證 Cookie！");
+        }
+
+
+    } catch (error) {
+        console.error("認證錯誤:", error);
+        alert("認證失敗！");
+    }
+}
+
+
+// 這個函式會在 OAuth 登入頁面中被呼叫
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
 // 頁面載入時獲取使用者名單
 document.addEventListener("DOMContentLoaded", updateUserList);
 
@@ -415,5 +490,6 @@ export {
     verify_register,
     clearData,
     logout,
+    oauth_login,
 }
 

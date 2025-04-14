@@ -1,0 +1,28 @@
+<!-- templates/oauth_login.html -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth 登入</title>
+    <style>
+       
+    </style>
+    <script type="module" src="/static/web_functions.js"></script>
+    <script type="module" src="/static/script.js"></script>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}?v=2" />
+</head>
+
+<body>
+    <div class="card">
+        <h2>OAuth 登入</h2>
+        <input type="text" id="username" placeholder="請輸入使用者名稱" />
+        <br />
+        <button onclick="oauth_login()">登入</button>
+    </div>
+
+  
+</body>
+
+</html>

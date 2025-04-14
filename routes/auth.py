@@ -232,7 +232,6 @@ def verify_credential():
         response.set_cookie(
             key="token",
             value=JWT_Token,
-            httponly=True,  # 防止 JavaScript 存取（防止 XSS）
             secure=True,  # 僅 HTTPS 傳送（防止 MITM）
             samesite="Strict",  # 防止 CSRF
             max_age=3600,  # Token 有效時間（秒）
