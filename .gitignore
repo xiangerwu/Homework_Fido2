@@ -11,3 +11,4 @@ static/package*
 
 SSL_file/*
 Database/fido2_user.db
+server_key/server.key

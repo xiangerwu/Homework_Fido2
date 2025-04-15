@@ -211,32 +211,46 @@ def verify_credential():
         # 產生 JWT Token
         JWT_Token = None
         if auth_result:
+            JWT_expire_time = 0
+            Cookie_expire_time = 0
+            # 如果沒有從 OAuth 來的請求，則設定 JWT 和 Cookie 的有效時間
+            # 這裡的 JWT_expire_time 和 Cookie_expire_time 是用來設定 Token 的有效時間
+            if "from_oauth" not in request.args:
+                JWT_expire_time = 60      # Token 有效時間（分鐘）
+                Cookie_expire_time=3600  # Token 有效時間（秒）
+            
+            else:
+                JWT_expire_time = 0.3
+                Cookie_expire_time = 25
+
             JWT_Token = generate_jwt(
                 username=username,
                 aaguid=attested_data.aaguid.hex(),
                 sign_count=parsed_auth_data.counter,
                 role="user",
-                expire_minutes=60,
+                expire_minutes=JWT_expire_time,
             )
-        # print("\nJWT_Token:\n", JWT_Token)
-        # 回傳成功訊息
-        response = make_response(
-            jsonify(
-                {
-                    "status": "ok",
-                    "message": "成功認證",
-                    "signCount": parsed_auth_data.counter,
-                }
-            )
-        )
-        response.set_cookie(
-            key="token",
-            value=JWT_Token,
-            secure=True,  # 僅 HTTPS 傳送（防止 MITM）
-            samesite="Strict",  # 防止 CSRF
-            max_age=3600,  # Token 有效時間（秒）
-        )
-        return response
+            # print("\nJWT_Token:\n", JWT_Token)
+            # 回傳成功訊息
+            response = make_response(
+                jsonify(
+                    {
+                        "status": "ok",
+                        "message": "成功認證",
+                        "signCount": parsed_auth_data.counter,
+                    }
+                )
+            )        
+            response.set_cookie(
+                    key="token",
+                    value=JWT_Token,
+                    secure=True,  # 僅 HTTPS 傳送（防止 MITM）
+                    samesite="None",  # 防止 CSRF
+                    max_age=Cookie_expire_time,  # Token 有效時間（秒）
+                )    
+            return response
+        else:
+            return jsonify({"error": "登入驗證失敗"}), 400
     # 如果有錯誤，回傳錯誤訊息
     except Exception as e:
         print("error:", e)  # 顯示錯誤訊息

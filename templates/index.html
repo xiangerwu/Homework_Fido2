@@ -2,201 +2,33 @@
 <html lang="zh-TW">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebAuthn 測試</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" />
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="/static/web_functions.js"></script>
-    <script type="module" src="/static/script.js"></script>
+    <meta charset="UTF-8">
+    <title>首頁</title>
+    <script>
+        function openOAuthPopup() {
+            const popup = window.open(
+                "/oauth/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123",
+                "oauth_popup",
+                "width=750,height=400,resizable=no,scrollbars=no,toolbar=no,menubar=no"
+            );
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2" />
+            window.addEventListener("message", (event) => {
+                // 建議加上 origin 驗證
+                console.log("收到 popup 回傳資料：", event.data);
+
+                if (event.data.token) {
+                    alert("登入成功！收到 Token: " + event.data.token);
+                    // 可以儲存到 localStorage 或觸發登入邏輯
+                }
+            });
+        }
+    </script>
 </head>
 
-<body class="bg-dark text-light">
-    <!-- 標題 置中的標題 上方留白 -->
-    <div class="title-glass-effect-container">
-        <!-- 新增外層容器 -->
-        <div class="text-center mt-4 title-glass-effect">
-            <h1 class="text-primary">Yubiko Fido2 WebAuthn Demo</h1>
-            <p class="text-light">
-                這是一個簡單的範例，展示如何在網頁中使用 WebAuthn API
-                進行註冊，後端是使用 Python Flask 框架實作的。
-                <br />
-            </p>
-        </div>
-        <hr class="bg-light" />
-    </div>
-
-    <div class="container-fluid mt-4 responsive-container justify-content-center">
-        <!-- 內文 -->
-        <div class="row" style="display:flex;">
-
-            <!-- 左側主要內容區塊 -->
-            <div class="col-md-4 glass-effect glass-inner-top-padding">
-                <!-- 使用者名稱輸入區 -->
-                <div class="d-flex align-items-center mb-3">
-                    <label for="username" class="form-label me-2 fs-5">使用者名稱:</label>
-                    <input type="text" id="username" class="form-control bg-secondary text-light w-50 fs-5" />
-                </div>
-
-                <hr />
-
-                <!-- 註冊使用者區塊 -->
-                <div>
-                    <div class="d-flex align-items-center">
-                        <!-- 折疊按鈕 -->
-
-                        <button class="btn btn-outline-light me-3 toggle-btn"
-                            onclick="toggleCollapse('registerSection', this)">
-                            ▶
-                        </button>
-                        <h2 class="flex-grow-1 mb-0">註冊使用者</h2>
-                    </div>
-
-                    <!-- 註冊區塊 (可折疊) -->
-                    <div id="registerSection" class="custom-collapse mt-3">
-                        <!-- 註冊按鈕 -->
-                        <button class="btn btn-primary w-100 mb-3" onclick="register()">
-                            使用者註冊：將使用者 ID 傳給後端等待回傳憑證
-                        </button>
-
-                        <!-- 註冊流程展示 -->
-                        <div class="d-flex justify-content-center mt-1 mb-1">
-                            <i class="bi bi-arrow-down display-6"></i>
-                        </div>
-                        <h4 class="mt-2 mb-1">後端傳過來的 Challenge</h4>
-                        <pre id="Register_Challenge"
-                            class="bg-secondary text-light p-3 border rounded text-break"></pre>
-
-                        <div class="d-flex justify-content-center mt-1 mb-1">
-                            <i class="bi bi-arrow-down display-6"></i>
-                        </div>
-                        <h4 class="mt-2 mb-1">
-                            將後端回傳憑證後交給瀏覽器運算後的資料
-                        </h4>
-                        <pre id="Register_credentialInfo"
-                            class="bg-dark text-light p-3 border rounded overflow-auto"></pre>
-                    </div>
-                </div>
-
-                <hr />
-
-                <!-- 使用者驗證/登入區塊 -->
-                <div>
-                    <div class="d-flex align-items-center">
-                        <!-- 折疊按鈕 -->
-                        <button class="btn btn-outline-light me-3 toggle-btn"
-                            onclick="toggleCollapse('AuthenSection', this)">
-                            ▶
-                        </button>
-
-                        <h2 class="flex-grow-1 mb-0">使用者驗證/登入</h2>
-                    </div>
-
-                    <!-- 驗證區塊 (可折疊) -->
-                    <div id="AuthenSection" class="custom-collapse mt-3">
-                        <!-- 登入按鈕 -->
-                        <button class="btn btn-success w-100 mb-3" onclick="verify_register()">
-                            使用者登入：後端查詢資料後回傳憑證
-                        </button>
-
-                        <!-- 登入流程展示 -->
-                        <div class="d-flex justify-content-center mt-1 mb-1">
-                            <i class="bi bi-arrow-down display-6"></i>
-                        </div>
-                        <h4 class="mt-2 mb-1">後端傳過來的 challenge</h4>
-                        <pre id="Verify_Challenge" class="bg-secondary text-light p-3 border rounded text-break"></pre>
-
-                        <div class="d-flex justify-content-center mt-1 mb-1">
-                            <i class="bi bi-arrow-down display-6"></i>
-                        </div>
-                        <h4 class="mt-2 mb-1">後端憑證由瀏覽器認證結果</h4>
-                        <pre id="verify-register_credentialInfo"
-                            class="bg-secondary text-light p-3 border rounded text-break"></pre>
-                    </div>
-                </div>
-
-                <hr />
-
-                <!-- 清除憑證資訊按鈕 -->
-                <button class="btn btn-danger w-100" onclick="clearData()">
-                    清除全部憑證資訊 (All Users)
-                </button>
-            </div>
-
-            <!-- 右側空間 -->
-            <div class="col-md-6 glass-effect d-flex flex-column align-items-center glass-inner-top-padding">
-                <h2 class="w-75 text-center">目前使用者名單</h2>
-
-                <!-- 使用者表格 -->
-                <div class="table-responsive w-75">
-                    <table class="table table-dark table-striped table-bordered table-style">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>使用者名稱</th>
-                                <th>註冊時間</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userList">
-                            <!-- 使用者列表將由 JavaScript 動態填入 -->
-                        </tbody>
-                    </table>
-                </div>
-                <!-- <hr class="w-75" /> -->
-
-
-            </div>
-        </div>
-        <!-- 登入後顯示 -->
-        <div id="dashboard" style="display: none;">
-            <div id="welcomeBlock" class="welcome-bg text-center my-4">
-                <div class="bg-overlay"></div>
-                <div class="welcome-text">
-                    <h1>歡迎回來，<span id="welcomeUsername"></span>！</h1>
-                    <p>JWT 運作正常</p>
-                </div>
-            </div>
-
-
-            <!-- 使用者登入紀錄區塊 (預設隱藏) -->
-            <div id="loginHistorySection" class="w-100 d-none">
-                <h2 class="text-center" id="loginHistoryTitle">
-                    {username} 的登入紀錄
-                </h2>
-                <div class="table-responsive">
-                    <table class="table table-dark table-striped table-bordered table-style">
-                        <thead>
-                            <tr>
-                                <th>登入結果</th>
-                                <th>IP</th>
-                                <th>OS</th>
-                                <th>設備</th>
-                                <th>瀏覽器</th>
-                                <th>登入時間</th>
-                                <th>Authenticator</th>
-                            </tr>
-                        </thead>
-                        <tbody id="loginHistory">
-                            <!-- 登入紀錄將由 JavaScript 動態填入 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            應該要有登出按鈕對吧?
-            <button class="btn btn-danger" onclick="logout()">登出</button>
-        </div>
-    </div>
-    <div class="marquee-container">
-
-    </div>
-    <script>
-        const currentUser = {{ user | tojson | safe}};// 從後端獲取當前使用者資訊
-        const tokenError = {{ user_error | tojson | safe}};// 從後端獲取錯誤資訊
-    </script>
+<body>
+    <h1>Hello, World!</h1>
+    <p><a href="/main">點擊進入 WebAuthn 環節</a></p>
+    <p><a href="#" onclick="openOAuthPopup(); return false;">點擊進入 OAuth 環節（彈出視窗）</a></p>
 </body>
 
 </html>

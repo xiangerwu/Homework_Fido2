@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>授權完成</title>
+</head>
+
+<body>
+    <script>
+        const code = "{{ code }}";
+        const state = "{{ state }}";
+
+        if (window.opener && code) {
+            window.opener.postMessage({
+                status: "login_success",
+                code: code,
+                state: state
+            }, "*");
+            window.close();
+        } else {
+            document.body.innerText = "⚠ 無法傳送授權碼，請手動關閉此視窗";
+        }
+    </script>
+</body>
+
+</html>

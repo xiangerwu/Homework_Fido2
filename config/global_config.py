@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 from functools import wraps
 from flask import request
 
-
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 """ Global Variables """
 
@@ -48,6 +49,16 @@ def base64url_to_bytes(base64url_str):
     padding = "=" * (4 - len(base64url_str) % 4)
     return base64.urlsafe_b64decode(base64url_str + padding)
 
+def base64url_uint(val: int) -> str:
+    """
+    將整數轉換為 Base64URL 編碼的字串（無符號）
+    - 去掉 '=' padding
+    - 使用 URL-safe base64 編碼
+    """
+    byte_length = (val.bit_length() + 7) // 8
+    byte_array = val.to_bytes(byte_length, 'big')  # 轉成 byte
+    b64 = base64.urlsafe_b64encode(byte_array).rstrip(b"=")  # URL-safe + 無填充
+    return b64.decode("utf-8")
 
 # 函數：將 username 轉換為 HTML 實體編碼
 def sanitize_username(username):
@@ -97,8 +108,10 @@ def generate_jwt(
         payload["aaguid"] = aaguid
     if sign_count is not None:
         payload["signCount"] = sign_count
-
-    token = jwt.encode(payload, g_secret_key, algorithm="HS256")
+    # 讀取 server_key/server.key
+    with open("server_key/server.key", "r") as f:
+        private_key = f.read()
+    token = jwt.encode(payload, private_key, algorithm="RS256")
     return token
 
 # 函數：檢查 JWT Token 是否有效
@@ -114,7 +127,12 @@ def decode_jwt(token: str):
         str: 錯誤訊息（如果有的話）
     """
     try:
-        payload = jwt.decode(token, g_secret_key, algorithms=["HS256"],issuer=ORIGIN)
+        with open("server_key/server.crt", "rb") as f:
+            cert_data = f.read()
+            cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+            public_key = cert.public_key()
+
+        payload = jwt.decode(token, public_key, algorithms=["RS256"],issuer=ORIGIN)
         return payload,None # 解碼成功，回傳 Payload 字典
     except jwt.ExpiredSignatureError:
         return None, str("Token 已過期")

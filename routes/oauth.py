@@ -11,6 +11,8 @@
 from flask import Blueprint, request, jsonify, session, render_template,redirect
 import os, json
 import secrets
+from uuid import uuid4
+from datetime import datetime, timedelta, timezone
 import time
 # 引入 global_config 自定義模塊
 from config.global_config import (
@@ -24,6 +26,7 @@ from config.global_config import (
     unsanitize_username,
     attach_jwt_if_available,
     generate_jwt,
+    decode_jwt,
 )
 
 # 引入 db_manager 自定義模塊
@@ -39,96 +42,111 @@ oauth_bp = Blueprint("oauth", __name__)
 
 
 """ OAuth Functions """
-
-#  暫存 code 對應資料（可用 Redis 替換）
-code_cache = {}  # 格式: { code: { user, client_id, redirect_uri, exp } }
-
-# 產生授權碼
-# 1. 產生安全亂數授權碼
-# 2. 儲存對應資料到暫存（這裡簡單用 dict，可換 Redis）
-# 3. 返回授權碼
-# 4. 授權碼有效時間預設 60 秒
-def generate_auth_code(user_id, client_id, redirect_uri, expire_seconds=60):
-    # 產生安全亂數授權碼
-    code = secrets.token_urlsafe(16)
-
-    # 儲存對應資料到暫存（這裡簡單用 dict，可換 Redis）
-    code_cache[code] = {
-        "user_id": user_id,
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "exp": time.time() + expire_seconds
-    }
-    return code
-
-# 驗證授權碼
-# 1. 檢查授權碼是否存在
-# 2. 檢查授權碼是否過期
-# 3. 檢查 client_id 與 redirect_uri 是否符合原本發出的
-# 4. 檢查授權碼是否已被使用
-# 5. 驗證成功後，刪除授權碼
-# 6. 驗證失敗，返回錯誤訊息
-def validate_and_consume_code(code, client_id, redirect_uri):
-    # 檢查授權碼是否存在
-    info = code_cache.get(code)
-    if not info:
-        return None, "授權碼不存在或已使用"
-
-    # 時間過期
-    if time.time() > info["exp"]:
-        del code_cache[code]
-        return None, "授權碼已過期"
-
-    # 驗證 client_id 與 redirect_uri 是否符合原本發出的
-    if info["client_id"] != client_id or info["redirect_uri"] != redirect_uri:
-        return None, "授權碼與 client_id 或 redirect_uri 不符"
-
-    # 一次性使用 → 刪除
-    del code_cache[code]
-    return info, None
+# 模擬儲存授權碼（可改為 Redis）
+AUTH_CODE_STORE = {}
 
 # 網頁路徑 /oauth/authorize
 # 作用: OAuth 認證頁面
 @oauth_bp.route("/authorize", methods=["GET"])
 @attach_jwt_if_available
 def authorize():
-    # 檢查用戶是否已登入
-    if not request.jwt_payload:
-        # 如果未登入，重定向到登入頁面
-        return render_template("oauth_login.html") 
-    # 如果已登入，顯示授權頁面
-    # 取得前端傳來的必要參數
-    user_id = request.jwt_payload["sub"]
+    print("🧠 收到 /authorize 請求")
+    print("🔎 Cookies:", request.cookies)
+
+    # ✅ Step 1: 擷取來自 B 的參數
     client_id = request.args.get("client_id")
     redirect_uri = request.args.get("redirect_uri")
+    response_type = request.args.get("response_type")
+    scope = request.args.get("scope", "")
     state = request.args.get("state")
-    # 產生授權碼
-    code = generate_auth_code(user_id, client_id, redirect_uri)
-    # 將授權碼回傳給前端
-    # 這裡使用 GET 方法回傳，實際上可以使用 POST 方法
-    return redirect(f"{redirect_uri}?code={code}&state={state}")
+
+    # ✅ Step 2: 檢查參數完整性
+    if not all([client_id, redirect_uri, response_type, state]):
+        return "❌ 缺少必要參數", 400
+
+    if response_type != "code":
+        return "❌ 不支援的 response_type", 400
+
+    # ✅ Step 3: 檢查是否登入
+    if not request.jwt_payload:
+        print("❎ 尚未登入 → 顯示登入頁")
+        # 傳遞參數回登入頁面以便後續 redirect 回來
+        return render_template(
+            "oauth_login.html",
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            scope=scope,
+            state=state,
+        )
+
+    # ✅ Step 4: 使用者已登入，產生授權碼
+    user_id = request.jwt_payload["sub"]
+    code = str(uuid4())
+
+    # ✅ Step 5: 儲存授權碼資料
+    AUTH_CODE_STORE[code] = {
+        "user_id": user_id,
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "scope": scope,
+        "issued_at": int(time.time()),
+        "expires_in": 300  # 5 分鐘有效
+    }
+
+    print(f"✅ 使用者 {user_id} 已登入，授權碼產生：{code}")
+
+    # ✅ Step 6: 回傳授權碼 via postMessage
+    return render_template("auth_success.html", code=code, state=state)
 
 
+# 網頁路徑 /oauth/Code2Token
+# 作用: 將授權碼轉換為 Token
+# 是後端 API，應該不會直接被用戶端調用
+@oauth_bp.route("/Code2Token", methods=["POST"])
+def code_to_token():
+    print("收到 /Code2Token 請求")
+    # 獲取請求的 JSON 資料
+    received_data = request.json or {}
+    # 獲取參數
+    received_code           = received_data.get("code")
+    received_client_id      = received_data.get("client_id")
+    received_redirect_uri   = received_data.get("redirect_uri")
+    received_grant_type     = received_data.get("grant_type")
 
+    # ✅ Step 1: 檢查參數
+    if not all([received_code, received_client_id, received_redirect_uri, received_grant_type]):
+        return jsonify({"error": "缺少必要參數"}), 400
+    if received_grant_type != "authorization_code":
+        return jsonify({"error": "不支援的 grant_type"}), 400
 
+    # ✅ Step 2: 驗證授權碼是否存在
+    code_data = AUTH_CODE_STORE.get(received_code)
+    if not code_data:
+        return jsonify({"error": "無效的授權碼"}), 400
 
-# 網頁路徑 /oauth/token
-# 作用: OAuth Token 發放頁面
-@oauth_bp.route("/token", methods=["POST"])
-def token():
-    code = request.form.get("code")
-    client_id = request.form.get("client_id")
-    redirect_uri = request.form.get("redirect_uri")
+    # ✅ Step 3: 驗證 client_id 與 redirect_uri 是否一致
+    if code_data["client_id"] != received_client_id or code_data["redirect_uri"] != received_redirect_uri:
+        return jsonify({"error": "client_id 或 redirect_uri 不一致"}), 400
 
-    info, error = validate_and_consume_code(code, client_id, redirect_uri)
-    if error:
-        return jsonify({"error": error}), 400
+    # ✅ Step 4: 檢查是否過期（預設 5 分鐘有效）
+    now = datetime.now(timezone.utc)
+    issued_time = datetime.fromtimestamp(code_data["issued_at"], timezone.utc)
+    if now - issued_time > timedelta(minutes=5):
+        return jsonify({"error": "授權碼已過期"}), 400
 
-    # 產生 access_token
-    token = generate_jwt(username=info["user_id"], role="user", expire_minutes=60)
+    # ✅ Step 5: 簽發 id_token（JWT）
+    id_token = generate_jwt(
+        username="auth_server",
+        role="thired_party",
+        expire_minutes=60
+    )
+
+    # ✅ Step 6: 清除一次性 code（只可使用一次）
+    del AUTH_CODE_STORE[received_code]
 
     return jsonify({
-        "access_token": token,
-        "token_type": "bearer",
+        "access_token": id_token,
+        "id_token": id_token,
+        "token_type": "Bearer",
         "expires_in": 3600
     })

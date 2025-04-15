@@ -34,39 +34,7 @@ app.secret_key = g_secret_key
 # 首頁
 @app.route("/")
 def home():
-    return """
-    <!DOCTYPE html>
-    <html lang="zh-TW">
-    <head>
-      <meta charset="UTF-8">
-      <title>首頁</title>
-      <script>
-        function openOAuthPopup() {
-          const popup = window.open(
-            "/oauth/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123",
-            "oauth_popup",
-            "width=500,height=600"
-          );
-
-          window.addEventListener("message", (event) => {
-            // 建議加上 origin 驗證
-            console.log("收到 popup 回傳資料：", event.data);
-
-            if (event.data.token) {
-              alert("登入成功！收到 Token: " + event.data.token);
-              // 可以儲存到 localStorage 或觸發登入邏輯
-            }
-          });
-        }
-      </script>
-    </head>
-    <body>
-      <h1>Hello, World!</h1>
-      <p><a href="/main">點擊進入 WebAuthn 環節</a></p>
-      <p><a href="#" onclick="openOAuthPopup(); return false;">點擊進入 OAuth 環節（彈出視窗）</a></p>
-    </body>
-    </html>
-    """
+    return render_template("index.html")
 
 # 主要測試頁面
 @app.route("/main")
@@ -74,7 +42,7 @@ def home():
 def main():
     print("✅ JWT Payload:", request.jwt_payload)
     print("❎ JWT Error:", request.jwt_error)
-    return render_template("index.html", user=request.jwt_payload, user_error = request.jwt_error)
+    return render_template("main.html", user=request.jwt_payload, user_error = request.jwt_error)
 
 # 測試 oauth
 @app.route("/oauth")
@@ -99,11 +67,44 @@ def users():
     return jsonify(user_list)
 
 
+@app.route("/.well-known/jwks.json")
+def jwks():
+    # 載入公鑰（從 server.crt）
+    from cryptography.hazmat.primitives import serialization
+
+    with open("server_key/server.crt", "rb") as f:
+        cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+        public_key = cert.public_key()
+
+    # 轉成 JWKS 格式（略簡化版）
+    numbers = public_key.public_numbers()
+    jwk = {
+        "kty": "RSA",
+        "use": "sig",
+        "alg": "RS256",
+        "n": base64url_uint(numbers.n),
+        "e": base64url_uint(numbers.e),
+        "kid": "A1",  # 可自行定義金鑰 ID
+    }
+
+    return jsonify({"keys": [jwk]})
+
 # 登出
-@app.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["POST","GET"])
 def logout():
-    response = make_response(jsonify({"message": "登出成功"}))
-    response.set_cookie("token", "", max_age=0, httponly=True, secure=True, samesite="Strict")
+    print("🧼 清除 A 的 token cookie")
+    response = make_response("""
+        <html>
+        <body>
+            <script>
+                // 清除 cookie 只是保險手段，讓 JS 強制做一次
+                document.cookie = "token=; path=/; max-age=0; SameSite=None; Secure";
+                window.location.href = "/";
+            </script>
+        </body>
+        </html>
+    """)
+    response.set_cookie("token", "", max_age=0, secure=True, samesite="None", path="/")
     return response
 
 
