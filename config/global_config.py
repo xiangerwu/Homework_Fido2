@@ -3,7 +3,6 @@ import os
 import html, re
 import jwt
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo
 from functools import wraps
 from flask import request
 
@@ -14,7 +13,6 @@ from cryptography.hazmat.backends import default_backend
 
 
 g_IP = "0.0.0.0"  # Flask 在 Render 上應該綁定所有 IP
-# g_IP = "127.0.0.1"
 RP_NAME = "My WebAuthn App"  # 可保持不變，或改成你的應用名稱
 g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 g_port = 5000  # 預設 Flask 埠號
@@ -49,6 +47,9 @@ def base64url_to_bytes(base64url_str):
     padding = "=" * (4 - len(base64url_str) % 4)
     return base64.urlsafe_b64decode(base64url_str + padding)
 
+# 函式名稱: base64url_uint
+# 作用: 將整數轉換為 Base64URL 編碼的字串（無符號）
+# 參數: 整數
 def base64url_uint(val: int) -> str:
     """
     將整數轉換為 Base64URL 編碼的字串（無符號）
@@ -63,7 +64,6 @@ def base64url_uint(val: int) -> str:
 # 函數：將 username 轉換為 HTML 實體編碼
 def sanitize_username(username):
     return html.escape(username)
-
 
 # 函數：將 HTML 實體編碼轉換回正常字符
 def unsanitize_username(safe_username):
@@ -111,7 +111,7 @@ def generate_jwt(
     # 讀取 server_key/server.key
     with open("server_key/server.key", "r") as f:
         private_key = f.read()
-    token = jwt.encode(payload, private_key, algorithm="RS256")
+    token = jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": "A1"})
     return token
 
 # 函數：檢查 JWT Token 是否有效

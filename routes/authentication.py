@@ -1,5 +1,5 @@
 """說明
-# auth 路由
+# authentication 路由
 # 這個路由用於驗證 WebAuthn 憑證
 # 主要有兩個路由
 # 1. /verify-register   驗證 WebAuthn 註冊資料
@@ -7,8 +7,8 @@
 """
 
 """ Import Module """
-# 引入 os 模塊
-import os, json
+# 引入 模塊
+import  json
 
 # 引入 flask 模塊
 from flask import Blueprint, request, jsonify, session, make_response
@@ -29,7 +29,6 @@ from config.global_config import (
 # 引入 db_manager 自定義模塊
 from Database.db_manager import DatabaseManager
 
-
 # 引入 fido2 模塊
 from fido2.webauthn import (
     AttestedCredentialData,
@@ -40,7 +39,6 @@ from fido2.webauthn import (
 )
 
 from app import server as app_server
-
 from user_agents import parse
 
 # 啟用 WebAuthn JSON 映射
@@ -51,23 +49,27 @@ auth_bp = Blueprint("auth", __name__)
 
 """ Auth Functions """
 
-
 # 網頁路徑 /verify-register
 # 作用: 驗證 WebAuthn 註冊資料
 @auth_bp.route("", methods=["POST"], strict_slashes=False)
 def verify_register():
     # 取得用戶提交的 JSON 數據，並檢查用戶名稱
+    print("authentication - verify_register")
     data = request.json
     username = sanitize_username(data.get("username"))
     if not username:
         return jsonify({"error": "請提供使用者名稱"}), 400
     try:
+        print("authentication - 取得使用者註冊資料,username=", username)
         # 檢查資料是否有效，並取得使用者註冊資料(後端)或錯誤回傳
         with DatabaseManager(db_users) as db:
-            server_credential_data = db.get_credential(username)[0]
-        if not server_credential_data:
-            return jsonify({"error": "用戶註冊憑證不存在"}), 400
-
+            print("authentication - 檢查資料庫是否有效")
+            db_credential_data = db.get_credential(username)
+        if not db_credential_data:
+            print("authentication - 用戶不存在")
+            return jsonify({"error": "用戶不存在"}), 400
+        server_credential_data = db_credential_data[0]
+        print("authentication - 轉換 fido2 的 Authenticator 物件")
         # 這時 server_credential_data 是後端儲存的註冊資料並且是 bytes 類型
         # 這裡將料轉換為 fido2 的 Authenticator 物件
         restored_server_credential_data = AuthenticatorData(server_credential_data)
@@ -80,6 +82,7 @@ def verify_register():
             public_key=Credential_data.public_key,  # 設定 public_key: 公鑰
         )
 
+        print("authentication - 使用 yubiko fido2 套件開始驗證")
         # 使用 yubiko fido2 套件開始驗證
         # 這裡設定了驗證選項，並且設定了驗證設備的要求
         options, state = app_server.authenticate_begin(
@@ -87,6 +90,7 @@ def verify_register():
             user_verification=UserVerificationRequirement.REQUIRED,  # 驗證設定
         )
 
+        print("authentication - 更新 session")
         # 更新 session 中的 state
         # 將 state 序列化為 JSON 格式
         serialized_state = json.dumps(state)

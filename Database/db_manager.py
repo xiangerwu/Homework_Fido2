@@ -54,6 +54,7 @@ class DatabaseManager:
     # 查詢憑證，回傳用戶名稱與憑證
     def get_credential(self, username):
         try:
+            print(f"get_credential: {username}")
             query = "SELECT Credential FROM Users_List WHERE User_name = ?;"
             return self.execute_query(query, (username,), fetchone=True)
         except Exception as e:

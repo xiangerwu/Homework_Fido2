@@ -1,3 +1,40 @@
+window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
+
+// 函式名稱: sendRequest
+// 作用: 向後端發送請求
+// 參數: url (string) - 請求的路徑
+//      method (string) - 請求的方法
+//      data (object) - 請求的資料
+// 回傳: response.json() - 後端回應的資料
+async function sendRequest(url, method, data) {
+    try {
+        const response = await fetch(
+            window.direct_url + url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: body?JSON.stringify(data): null,
+            credentials: "include", // 這行是讓 cookie 可以傳送到後端
+        });
+        const text = await response.text();
+        let result;
+
+        try {
+            result = JSON.parse(text);
+        } catch {
+            result = { error: "❌ 後端回傳非 JSON 格式", raw: text };
+        }
+
+        if (!response.ok) {
+            result.error = result.error || `❌ 錯誤狀態碼 ${response.status}`;
+        }
+
+        return result;
+    } catch (error) {
+        return { error: "❌ 請求失敗：" + error.message };
+    }
+}
+
+
 /* 
     函式名稱: base64UrlToUint8Array
     作用:將 base64url 字串轉換為 Uint8Array
@@ -74,19 +111,6 @@ function NetworkError(message) {
         return true;
     }
     return false;
-}
-
-// 切換折疊區塊
-async function toggleCollapse(id, btn) {
-    const section = document.getElementById(id);
-    section.classList.toggle("show");
-
-    // 切換按鈕方向
-    if (section.classList.contains("show")) {
-        btn.innerHTML = "▼";
-    } else {
-        btn.innerHTML = "▶";
-    }
 }
 
 // 使用 SHA-256 加密密碼
@@ -199,18 +223,81 @@ function escapeHTML(str) {
     return element.innerHTML;
 }
 
+// 取得 URL 參數
+function getURLParam(key) {
+    return new URLSearchParams(window.location.search).get(key);
+}
+// 取得 Cookie
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
 
+// 轉換特殊文字名稱
+function htmlUnescape(str) {
+    const div = document.createElement("div");
+    div.innerHTML = str;
+    return div.textContent;
+}
+
+
+// 顯示登入紀錄
+async function showLoginHistory(username) {
+    const loginHistorySection = document.getElementById("loginHistorySection");
+    const loginHistoryTitle = document.getElementById("loginHistoryTitle");
+    const loginHistory = document.getElementById("loginHistory");
+
+    const userdata = await sendRequest("/authentication/user-log", "POST", { username });
+    console.log("user_log:", userdata);
+
+    // 更新標題
+    loginHistoryTitle.innerText = `${username} 的登入紀錄`;
+
+    // 清空舊資料
+    loginHistory.innerHTML = "";
+
+    try {
+        // 檢查是否有紀錄
+        if (userdata.length === 0) {
+            loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-warning">無登入紀錄</td></tr>`;
+        } else {
+            // 迭代紀錄，填充表格
+            userdata.forEach(log => {
+                let row = `
+                    <tr>
+                    <td>${log.loginStatus ? "✅" : "❌"}</td>
+                    <td>${log.ip}</td>
+                    <td>${log.device}</td>
+                    <td>${log.os}</td>
+                    <td>${log.browser}</td>
+                    <td>${log.loginTime}</td>
+                    <td>${log.authenticator}</td>
+                    </tr>
+                `;
+                loginHistory.innerHTML += row;
+            });
+        }
+
+        // 顯示登入紀錄區塊
+        loginHistorySection.classList.remove("d-none");
+
+    } catch (error) {
+        console.error("獲取登入紀錄時發生錯誤:", error);
+        loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-danger">無法載入登入紀錄</td></tr>`;
+    }
+}
 
 
 // 匯出函式，讓其他程式使用
 export {
+    sendRequest,
     base64UrlToUint8Array,
     uint8ArrayToBase64Url,
     arrayBufferToBase64,
     showMessage,
     appendMessage,
     NetworkError,
-    toggleCollapse,
     hashPassword,
     credentialToJSON,
     getRandomColor,
@@ -218,6 +305,11 @@ export {
     setRandomOrder,
     generateMarqueeText,
     escapeHTML,
-    convertCredential
+    convertCredential,
+    getURLParam,
+    getCookie,
+    htmlUnescape,
+    showLoginHistory,
 }
+
 

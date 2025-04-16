@@ -3,22 +3,30 @@
 // 這個檔案會引入 web_functions.js 檔案，裡面有一些轉換資料的函式
 //
 
-// 引入 web_functions.js 檔案，將常用的放進去減少程式碼重複
+// 引入 web_functions.js 檔案，取用所有的函式
 import {
+    sendRequest,
     base64UrlToUint8Array,
+    uint8ArrayToBase64Url,
+    arrayBufferToBase64,
     showMessage,
     appendMessage,
     NetworkError,
-    toggleCollapse,
     hashPassword,
     credentialToJSON,
+    getRandomColor,
     setRandomColor,
     setRandomOrder,
     generateMarqueeText,
     escapeHTML,
     convertCredential,
+    getURLParam,
+    getCookie,
+    htmlUnescape,
+    showLoginHistory,
 
-} from "./web_functions.js";
+}
+from"./web_functions.js";
 
 // 將函式註冊到 window 物件上
 window.register = register;
@@ -26,29 +34,13 @@ window.verify_register = verify_register;
 window.clearData = clearData;
 window.toggleCollapse = toggleCollapse;
 window.logout = logout;
-window.oauth_login = oauth_login;
 
 
+// 頁面載入時獲取使用者名單
+document.addEventListener("DOMContentLoaded", updateUserList);
 
 // 根據當前主機來設置不同的 URL
 window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
-
-// 函式名稱: sendRequest
-// 作用: 向後端發送請求
-// 參數: url (string) - 請求的路徑
-//      method (string) - 請求的方法
-//      data (object) - 請求的資料
-// 回傳: response.json() - 後端回應的資料
-async function sendRequest(url, method, data) {
-    const response = await fetch(
-        window.direct_url + url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include", // 這行是讓 cookie 可以傳送到後端
-    });
-    return response.json();
-}
 
 
 // WebAuthn 註冊 register 函式
@@ -148,7 +140,7 @@ async function verify_register() {
 
         // 第一步: 向後端確認使用者存在
         // 傳送使用者名稱到後端
-        const options = await sendRequest("/auth", "POST", { username });
+        const options = await sendRequest("/authentication", "POST", { username });
 
         // 取得回應後顯示在主控台
         console.log("後端回應:", options);
@@ -160,7 +152,6 @@ async function verify_register() {
             return;
         }
         // 如果後端回應沒有錯誤，則繼續執行下一步
-
 
         // 第二步: 從瀏覽器取得憑證
         console.log("2.後端回傳使用者資料再從瀏覽器取得憑證");
@@ -184,7 +175,7 @@ async function verify_register() {
  
         let verify_credential = { username: username, credential: convertCredential(credential,navigator.userAgent), };
         // 將認證結果傳送給後端進行驗證
-        const verifyResult = await sendRequest("/auth/verify-credential", "POST", verify_credential);
+        const verifyResult = await sendRequest("/authentication/verify-credential", "POST", verify_credential);
 
         // 顯示驗證結果
         console.log("登入驗證結果:", verifyResult);
@@ -216,6 +207,13 @@ async function verify_register() {
         alert("認證失敗！");
     }
 } // end of verify_register()
+
+async function logout(){
+    // 清除 cookie
+    const options = await sendRequest("/logout", "POST");
+    // 重整頁面
+    location.reload();
+}
 
 // 清除憑證資訊
 async function clearData() {
@@ -264,93 +262,6 @@ async function clearData() {
     }
 } // end of clear()
 
-
-// OAuth 登入函式
-// 這個函式會在 OAuth 登入頁面中被呼叫
-// 它會向後端發送登入請求，並獲取 JWT token
-// 然後將 token 傳回主頁面
-async function oauth_login() {
-    const username = document.getElementById("username").value;
-    if (!username) {
-        alert("請輸入使用者名稱");
-        return;
-    }
-
-    try {
-
-        // ✅ 第一步：發送使用者名稱，獲取 PublicKeyCredential options
-        const options = await sendRequest("/auth", "POST", { username });
-        console.log("後端回應:", options);
-        // 偵錯用
-        if (options.error) {
-            console.error("認證錯誤(後端回應 error):", options.error);
-            alert("認證失敗(後端回應 error):" + options.error + "！");
-            return;
-        }
-
-        // ✅ 第二步：轉換 publicKey 結構（挑戰碼、憑證 ID）
-        // 轉換 base64url 字串為 Uint8Array 格式
-        options.publicKey.challenge = base64UrlToUint8Array(options.publicKey.challenge);
-        options.publicKey.allowCredentials = options.publicKey.allowCredentials.map((cred) => ({
-            id: base64UrlToUint8Array(cred.id), // 轉換 base64url 字串為 Uint8Array 格式
-            type: cred.type,
-        }));
-
-        // ✅ 第三步：透過瀏覽器取得 WebAuthn 憑證
-        const credential = await navigator.credentials.get(options);
-
-        // ✅ 第四步：組裝驗證資料並送回後端驗證
-        const verify_credential = { 
-            username: username, 
-            credential: convertCredential(credential, navigator.userAgent), 
-        };
-
-        // 將驗證器認證結果傳送給後端進行驗證
-        const verifyResult = await sendRequest("/auth/verify-credential?from_oauth=1", "POST", verify_credential);
-        console.log("登入驗證結果:", verifyResult);
-
-        if (verifyResult.error) {
-            console.error("登入驗證錯誤:", verifyResult.error);
-            return;
-        }
-
-
-        // 嘗試從 cookie 取出 token
-        const token = getCookie("token");
-        if (token && window.opener) {
-            alert("登入成功，將 token 傳回主頁面", token);
-            window.opener.postMessage({ status: "login_success", token }, "*");
-            window.close();
-        } else {
-            alert("找不到登入憑證 Cookie！");
-        }
-
-
-    } catch (error) {
-        console.error("認證錯誤:", error);
-        alert("認證失敗！");
-    }
-}
-
-
-// 這個函式會在 OAuth 登入頁面中被呼叫
-
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
-// 頁面載入時獲取使用者名單
-document.addEventListener("DOMContentLoaded", updateUserList);
-
-// 轉換特殊文字名稱
-function htmlUnescape(str) {
-    const div = document.createElement("div");
-    div.innerHTML = str;
-    return div.textContent;
-}
-
 // 取得如果後端偵測到登入狀態，則顯示登入狀態
 window.addEventListener("DOMContentLoaded", () => {
     // JWT 存在並且驗證成功
@@ -367,8 +278,8 @@ window.addEventListener("DOMContentLoaded", () => {
         // 顯示使用者名稱
         span.innerText = ` ${username_raw}`;
         // 顯示登入紀錄
-        showLoginHistory(username_raw);        
-    } 
+        showLoginHistory(username_raw);
+    }
 });
 
 
@@ -417,54 +328,18 @@ async function updateUserList() {
     }
 }
 
+// 切換折疊區塊
+async function toggleCollapse(id, btn) {
+    const section = document.getElementById(id);
+    section.classList.toggle("show");
 
-// 顯示登入紀錄
-async function showLoginHistory(username) {
-    const loginHistorySection = document.getElementById("loginHistorySection");
-    const loginHistoryTitle = document.getElementById("loginHistoryTitle");
-    const loginHistory = document.getElementById("loginHistory");
-
-    const userdata = await sendRequest("/auth/user-log", "POST", { username });
-    console.log("user_log:", userdata);
-
-    // 更新標題
-    loginHistoryTitle.innerText = `${username} 的登入紀錄`;
-
-    // 清空舊資料
-    loginHistory.innerHTML = "";
-
-    try {
-        // 檢查是否有紀錄
-        if (userdata.length === 0) {
-            loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-warning">無登入紀錄</td></tr>`;
-        } else {
-            // 迭代紀錄，填充表格
-            userdata.forEach(log => {
-                let row = `
-                    <tr>
-                    <td>${log.loginStatus ? "✅" : "❌"}</td>
-                    <td>${log.ip}</td>
-                    <td>${log.device}</td>
-                    <td>${log.os}</td>
-                    <td>${log.browser}</td>
-                    <td>${log.loginTime}</td>
-                    <td>${log.authenticator}</td>
-                    </tr>
-                `;
-                loginHistory.innerHTML += row;
-            });
-        }
-
-        // 顯示登入紀錄區塊
-        loginHistorySection.classList.remove("d-none");
-
-    } catch (error) {
-        console.error("獲取登入紀錄時發生錯誤:", error);
-        loginHistory.innerHTML = `<tr><td colspan="6" class="text-center text-danger">無法載入登入紀錄</td></tr>`;
+    // 切換按鈕方向
+    if (section.classList.contains("show")) {
+        btn.innerHTML = "▼";
+    } else {
+        btn.innerHTML = "▶";
     }
 }
-
-
 
 // 每次載入頁面時設置隨機顏色與打亂順序
 window.onload = function () {
@@ -479,12 +354,6 @@ window.onload = function () {
 //     setRandomOrder();  // 每 5 秒打亂顯示順序
 // }, 1000);
 
-async function logout(){
-    // 清除 cookie
-    const options = await sendRequest("/logout", "POST");
-    // 重整頁面
-    window.reload();
-}
 
 // export 函式
 export {
@@ -492,6 +361,6 @@ export {
     verify_register,
     clearData,
     logout,
-    oauth_login,
+    updateUserList,
 }
 

@@ -1,10 +1,13 @@
 from config.global_config import *
 from Database.db_manager import DatabaseManager
-from flask import Flask, render_template, jsonify, request, redirect, make_response
+from flask import Flask, render_template, jsonify, request, make_response
 from flask_cors import CORS
 from flask_sslify import SSLify
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+
 import hashlib
 
 # 引入全域變數
@@ -15,11 +18,8 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 
 # 創建 Flask 應用，設定靜態資料夾與模板資料夾
 app = Flask(__name__, static_folder="static", template_folder="templates")
-
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 # 設定 CORS 跨域請求
-# if os.getenv("GAE_ENV", ""):
-# CORS(app, origins=["https://akitawan.moe", "https://fido2-web.akitawan.moe"])
-# else:
 CORS(app, origins=ORIGIN, supports_credentials=True)
 # 設定 SSL
 sslify = SSLify(app)
@@ -27,9 +27,19 @@ sslify = SSLify(app)
 # 設定 secret_key
 app.secret_key = g_secret_key
 
-
 """ 註冊路由部份 """
-
+"""
+現有路由列表
+- /  首頁
+- /main  主要測試頁面
+- /oauth  測試 oauth 
+- /users  取得所有用戶資料
+- /clear  清除測試用戶資料
+- /logout  登出
+- /oauth2/authorize  OAuth 認證頁面
+- /.well-known/jwks.json  JWKS 公鑰
+- 
+"""
 
 # 首頁
 @app.route("/")
@@ -40,12 +50,10 @@ def home():
 @app.route("/main")
 @attach_jwt_if_available
 def main():
-    print("✅ JWT Payload:", request.jwt_payload)
-    print("❎ JWT Error:", request.jwt_error)
     return render_template("main.html", user=request.jwt_payload, user_error = request.jwt_error)
 
 # 測試 oauth
-@app.route("/oauth")
+@app.route("/oauth2")
 def oauth():
     return render_template("oauth_login.html")
 
@@ -67,43 +75,12 @@ def users():
     return jsonify(user_list)
 
 
-@app.route("/.well-known/jwks.json")
-def jwks():
-    # 載入公鑰（從 server.crt）
-    from cryptography.hazmat.primitives import serialization
-
-    with open("server_key/server.crt", "rb") as f:
-        cert = x509.load_pem_x509_certificate(f.read(), default_backend())
-        public_key = cert.public_key()
-
-    # 轉成 JWKS 格式（略簡化版）
-    numbers = public_key.public_numbers()
-    jwk = {
-        "kty": "RSA",
-        "use": "sig",
-        "alg": "RS256",
-        "n": base64url_uint(numbers.n),
-        "e": base64url_uint(numbers.e),
-        "kid": "A1",  # 可自行定義金鑰 ID
-    }
-
-    return jsonify({"keys": [jwk]})
 
 # 登出
-@app.route("/logout", methods=["POST","GET"])
+@app.route("/logout", methods=["POST"])
 def logout():
     print("🧼 清除 A 的 token cookie")
-    response = make_response("""
-        <html>
-        <body>
-            <script>
-                // 清除 cookie 只是保險手段，讓 JS 強制做一次
-                document.cookie = "token=; path=/; max-age=0; SameSite=None; Secure";
-                window.location.href = "/";
-            </script>
-        </body>
-        </html>
-    """)
+    response = make_response(jsonify({"status": "ok", "message": "已登出"}))
     response.set_cookie("token", "", max_age=0, secure=True, samesite="None", path="/")
     return response
 
@@ -140,15 +117,14 @@ def clear():
 if __name__ == "__main__":
     # 引入拆分的路由
     from routes.register import register_bp
-    from routes.auth import auth_bp
-    from routes.oauth import oauth_bp
+    from routes.authentication import auth_bp
+    from routes.oauth2 import oauth_bp
     # 用於註冊的路由
     app.register_blueprint(register_bp, url_prefix="/register")
     # 用於驗證的路由
-    app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(auth_bp, url_prefix="/authentication")
     # 用於 OAuth 的路由
-    app.register_blueprint(oauth_bp, url_prefix="/oauth")
+    app.register_blueprint(oauth_bp, url_prefix="/oauth2")
     
-
     # app.run(host=g_IP, port=g_port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
     app.run(host=g_IP, port=g_port, debug=True)

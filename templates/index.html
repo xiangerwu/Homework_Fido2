@@ -7,7 +7,7 @@
     <script>
         function openOAuthPopup() {
             const popup = window.open(
-                "/oauth/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123",
+                "/oauth2/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123&response_type=code",
                 "oauth_popup",
                 "width=750,height=400,resizable=no,scrollbars=no,toolbar=no,menubar=no"
             );
@@ -29,6 +29,7 @@
     <h1>Hello, World!</h1>
     <p><a href="/main">點擊進入 WebAuthn 環節</a></p>
     <p><a href="#" onclick="openOAuthPopup(); return false;">點擊進入 OAuth 環節（彈出視窗）</a></p>
+    <p><a href="https://fido2-web.akitawan.moe/oauth2/.well-known/jwks.json">公開金鑰</a></p>
 </body>
 
 </html>
