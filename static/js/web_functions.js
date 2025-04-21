@@ -12,7 +12,7 @@ async function sendRequest(url, method, data) {
             window.direct_url + url, {
             method: method,
             headers: { "Content-Type": "application/json" },
-            body: body?JSON.stringify(data): null,
+            body: data?JSON.stringify(data): null,
             credentials: "include", // 這行是讓 cookie 可以傳送到後端
         });
         const text = await response.text();

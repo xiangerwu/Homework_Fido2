@@ -1,6 +1,6 @@
 from config.global_config import *
 from Database.db_manager import DatabaseManager
-from flask import Flask, render_template, jsonify, request, make_response
+from flask import Flask, render_template, jsonify, request, make_response,send_from_directory
 from flask_cors import CORS
 from flask_sslify import SSLify
 from fido2.server import Fido2Server
@@ -40,6 +40,14 @@ app.secret_key = g_secret_key
 - /.well-known/jwks.json  JWKS 公鑰
 - 
 """
+# icon
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, 'static/images'),
+        'favicon.png',
+        mimetype='image/png'
+    )
 
 # 首頁
 @app.route("/")
