@@ -7,9 +7,6 @@ from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-
-import hashlib
-
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
 

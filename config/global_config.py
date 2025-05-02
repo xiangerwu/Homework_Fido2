@@ -1,13 +1,18 @@
 import base64
 import os
 import html, re
-import jwt
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from flask import request
-
+import requests
+import json
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from base64 import urlsafe_b64encode,urlsafe_b64decode
+from jwcrypto import jwk,jwe,jws,jwt
+from jwcrypto.common import JWException
 
 """ Global Variables """
 
@@ -24,6 +29,13 @@ ORIGIN = "https://fido2-web.akitawan.moe"  # 改成你的正式域名，且使�
 db_users = "Database/fido2_user.db"
 
 
+# 來源與 JWKS URL 對照表
+SOURCE_KEY_URLS = {
+    ORIGIN: "server_key/server.crt",
+    "oauth.akitawan.moe": "http://127.0.0.1:5001/jwks.json",
+    "NCtA-client":"",
+    # 可擴充更多來源
+}
 """ General Functions """
 
 # 函式名稱: encode_bytes_to_base64
@@ -69,14 +81,52 @@ def sanitize_username(username):
 def unsanitize_username(safe_username):
     return html.unescape(safe_username)
 
+# 函數: 取得對應來源的公鑰
+# 作用: 取得來源的 JWKS URL，並從中獲取公鑰
+def load_public_key_by_source(source: str) -> jwk.JWK:
+    # 檢查來源是否在對照表中
+    url_or_path = SOURCE_KEY_URLS[source]
+    # 如果來源是 URL，則從 URL 下載公鑰
+    if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+        res = requests.get(url_or_path)
+        res.raise_for_status()
+        return jwk.JWK(**res.json()["keys"][0])
+    # 如果來源是本地檔案，則從檔案讀取公鑰
+    else:
+        with open(url_or_path, "rb") as f:
+            return jwk.JWK.from_pem(f.read())
+
+# 函數：讀取相對應來源的公鑰
+# 作用:將 payload 使用來源的公鑰加密
+def encrypt_payload(payload: dict, recipient_key: jwk.JWK) -> str:
+    print("加密 payload")
+    # 1. 載入 JWK 轉換為 cryptography 公鑰物件
+    public_key_obj = serialization.load_pem_public_key(
+        recipient_key.export_to_pem()
+    )
+
+    # 2. 加密 payload（轉為亂碼 bytes）
+    plaintext = json.dumps(payload).encode("utf-8")
+    encrypted = public_key_obj.encrypt(
+        plaintext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+    # 3. 編碼為 base64url 字串，便於放入 JWT claims 中
+    return urlsafe_b64encode(encrypted).decode("utf-8").rstrip("=")
 
 # 函數：產生 JWT Token
 def generate_jwt(
     username: str,
     aaguid: str = None,
     sign_count: int = None,
+    source: str = None,
+    destination: str = None,
     role: str = "user",
-    expire_minutes: int = 60,
 ) -> str:
     """
     產生 JWT Token
@@ -86,68 +136,95 @@ def generate_jwt(
         aaguid (str): FIDO2 裝置的識別碼（可選）
         sign_count (int): FIDO2 裝置的簽名計數器（可選）
         role (str): 使用者權限（預設為 'user'）
-        expire_minutes (int): Token 有效時間（分鐘）
+        "source"：來源網站
+        "destination"：目的地網站
 
     回傳:
         str: JWT 字串（已簽章）
     """
     # 取得當前時間
     now = datetime.now(timezone.utc)
-    exp = now + timedelta(minutes=60)
+    exp = now + timedelta(minutes=10)
 
-    # 產生 JWT Token 的 payload  
+    # 產生 JWT  的 payload  
+    print("包裝 payload")
     payload = {
         "sub": username,
         "role": role,
         "iat": int(now.timestamp()),  # 簽發時間
         "exp": int(exp.timestamp()),  # 到期時間
+        "src": source,  # 來源網站
+        "aud": destination,  # 目的地網站
         "iss": ORIGIN,  # 發行者
     }
-
+    # 如果有提供 aaguid 和 sign_count，則加入 payload
     if aaguid:
         payload["aaguid"] = aaguid
     if sign_count is not None:
         payload["signCount"] = sign_count
+
+    # 是否加密 payload 取決於 source 是否在對照表中
+    if source in SOURCE_KEY_URLS:
+        print("將 payload加密")
+        recipient_key = load_public_key_by_source(source)
+        claims = encrypt_payload(payload, recipient_key)
+    else:
+        print("不將 payload加密")
+        claims = payload  # 不加密
+   
+    #  
     # 讀取 server_key/server.key
-    with open("server_key/server.key", "r") as f:
-        private_key = f.read()
-    token = jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": "A1"})
-    return token
+    print("讀取私鑰 A")
+    with open("server_key/server.key", "rb") as f:
+        private_key = jwk.JWK.from_pem(f.read())
+    # 用私鑰簽名 JWT
+    print("用私鑰 A 簽章")
+    token = jwt.JWT(header={"alg": "RS256", "kid": "A1"}, claims=claims)
+    token.make_signed_token(private_key)
+    jwt_str = token.serialize()
+    return jwt_str
 
-# 函數：檢查 JWT Token 是否有效
-def decode_jwt(token: str):
-    """
-    解碼 JWT Token
-
-    參數:
-        token (str): JWT 字串（已簽章）
-
-    回傳:
-        dict: 解碼後的 payload
-        str: 錯誤訊息（如果有的話）
-    """
+# 函數：解碼 JWT Token
+# 作用: 驗證 JWT Token 的簽名，並解密 payload
+# 參數: JWT Token 字串
+# 回傳: payload 字典，或 None 以及錯誤訊息
+def decode_jwt(jwt_str: str):
     try:
+        print("驗簽 JWT ")
+        # Step 1: 驗章（用 A 的公鑰）
         with open("server_key/server.crt", "rb") as f:
-            cert_data = f.read()
-            cert = x509.load_pem_x509_certificate(cert_data, default_backend())
-            public_key = cert.public_key()
+            public_key = jwk.JWK.from_pem(f.read())
+        token = jwt.JWT(jwt=jwt_str, key=public_key)
+        encrypted_b64 = token.claims  # 這是 base64url 編碼的亂碼字串
+        print("解碼 JWT")
+        # Step 2: 解密 payload（用 A 的私鑰）
+        encrypted_bytes = urlsafe_b64decode(encrypted_b64 + '==')  # 補 "=" 避免 padding 問題
+        with open("server_key/server.key", "rb") as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+        decrypted = private_key.decrypt(
+            encrypted_bytes,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None,
+            )
+        )
+        payload = json.loads(decrypted.decode("utf-8"))
 
-        payload = jwt.decode(token, public_key, algorithms=["RS256"],issuer=ORIGIN)
-        return payload,None # 解碼成功，回傳 Payload 字典
-    except jwt.ExpiredSignatureError:
-        return None, str("Token 已過期")
-    except jwt.InvalidTokenError :
-        return None, str("無效的 Token") 
-    except jwt.InvalidSignatureError:
-        return None, str("無效的簽名")
-    except jwt.DecodeError:
-        return None, str("解碼錯誤")
-    except jwt.InvalidIssuerError:
-        return None, str("無效的發行者")
+        # Step 3: 驗證發行者
+        if payload.get("iss") != ORIGIN:
+            raise ValueError("無效的發行者")
+
+        return payload, None
+
+    except JWException as e:
+        return None, f"JWT 錯誤: {str(e)}"
+    except ValueError as e:
+        return None, str(e)
     except Exception as e:
-        return None, str(f"其他錯誤: {e}")
-        
+        return None, f"其他錯誤: {e}"
     
+
 # 函數：檢查 JWT Token 是否存在
 def attach_jwt_if_available(f):
     @wraps(f) # 確保原始函數的元資料不會被覆蓋
@@ -157,6 +234,7 @@ def attach_jwt_if_available(f):
     # 原始函數的名稱、文檔字串等資訊不會被改變。
     def wrapper(*args, **kwargs): 
         # 從請求的 cookies 中獲取 JWT Token        
+        print("開始檢查TOKEN")
         token = request.cookies.get("token")
         # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
@@ -168,6 +246,9 @@ def attach_jwt_if_available(f):
         request.jwt_payload = payload 
         # 如果有錯誤，則會是錯誤訊息
         request.jwt_error = jwt_error 
-
+        if payload:
+            print("JWT Token 有效",payload)
+        if jwt_error:
+            print("JWT Token 無效",jwt_error)
         return f(*args, **kwargs)
     return wrapper    

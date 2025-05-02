@@ -10,18 +10,18 @@
 
 <body>
     <script>
-        const code = "{{ code }}";
+        const JWT = "{{ JWT }}";
         const state = "{{ state }}";
 
-        if (window.opener && code) {
+        if (window.opener && JWT) {
             window.opener.postMessage({
                 status: "login_success",
-                code: code,
+                JWT: JWT,
                 state: state
             }, "*");
             window.close();
         } else {
-            document.body.innerText = "⚠ 無法傳送授權碼，請手動關閉此視窗";
+            document.body.innerText = "⚠ 無法傳送 JWT，請手動關閉此視窗";
         }
     </script>
 </body>

@@ -9,9 +9,17 @@
 """ Import Module """
 # 引入 模塊
 import  json
-
+import re
 # 引入 flask 模塊
-from flask import Blueprint, request, jsonify, session, make_response
+from flask import (
+    Blueprint, 
+    request, 
+    jsonify, 
+    session, 
+    make_response , 
+    Response
+)
+
 
 # 引入 global_config 自定義模塊
 from config.global_config import (
@@ -122,6 +130,12 @@ def verify_credential():
     # 取得用戶提交的 JSON 數據
     data = request.json
     username = sanitize_username(data.get("username"))
+     # 安全取得 source 與 dist（可選）
+    extra_source = data.get("source", None)
+    extra_dist = data.get("dist", None)
+    # 可加 debug 確認是否有帶入
+    debug_log.append(f"來源: {extra_source}, 目的地: {extra_dist}")
+    # 
     if not username:
         return jsonify({"error": "請提供使用者名稱"}), 400
     # 驗證憑證流程
@@ -215,43 +229,22 @@ def verify_credential():
         # 產生 JWT Token
         JWT_Token = None
         if auth_result:
-            JWT_expire_time = 0
-            Cookie_expire_time = 0
-            # 如果沒有從 OAuth 來的請求，則設定 JWT 和 Cookie 的有效時間
-            # 這裡的 JWT_expire_time 和 Cookie_expire_time 是用來設定 Token 的有效時間
-            if "from_oauth" not in request.args:
-                JWT_expire_time = 60      # Token 有效時間（分鐘）
-                Cookie_expire_time=3600  # Token 有效時間（秒）
-            
-            else:
-                JWT_expire_time = 0.3
-                Cookie_expire_time = 25
-
-            JWT_Token = generate_jwt(
+            # 從網址中解析是否來自其他網站
+            from_oauth = "from_oauth" in request.args
+            debug_log.append("generate_jwt")
+            #             
+            resolved_source = extra_source  or ORIGIN # or 會自動選擇第一個非空值    
+            resolved_dist   = extra_dist    or RP_ID
+            # 
+            response = generate_jwt_response(
                 username=username,
                 aaguid=attested_data.aaguid.hex(),
                 sign_count=parsed_auth_data.counter,
-                role="user",
-                expire_minutes=JWT_expire_time,
+                source=resolved_source,
+                destination=resolved_dist,
+                from_oauth=from_oauth
             )
-            # print("\nJWT_Token:\n", JWT_Token)
-            # 回傳成功訊息
-            response = make_response(
-                jsonify(
-                    {
-                        "status": "ok",
-                        "message": "成功認證",
-                        "signCount": parsed_auth_data.counter,
-                    }
-                )
-            )        
-            response.set_cookie(
-                    key="token",
-                    value=JWT_Token,
-                    secure=True,  # 僅 HTTPS 傳送（防止 MITM）
-                    samesite="None",  # 防止 CSRF
-                    max_age=Cookie_expire_time,  # Token 有效時間（秒）
-                )    
+
             return response
         else:
             return jsonify({"error": "登入驗證失敗"}), 400
@@ -327,3 +320,68 @@ def get_user_login_log():
         return user_record
     except Exception as e:
         raise Exception("Get User Log Error")
+
+
+def generate_jwt_response(
+    username: str,
+    aaguid: str,
+    sign_count: int,
+    source: str,
+    destination: str,
+    from_oauth: bool,
+):
+    """
+    根據使用者資訊產生 JWT，並建立含 JWT 的 HTTP 回應與 Cookie。
+    
+    參數:
+        username (str): 使用者帳號
+        aaguid (str): 裝置 AAGUID
+        sign_count (int): 簽章次數
+        source (str): JWT 來源站
+        destination (str): JWT 目的站
+        from_oauth (bool): 是否來自 OAuth 流程
+
+    回傳:
+        Flask Response：內含 JWT 與登入訊息
+    """
+
+    # 設定有效時間
+    if not from_oauth:
+        jwt_exp_min = 60           # JWT 有效分鐘
+        cookie_exp_sec = 3600      # Cookie 有效秒數
+    else:
+        jwt_exp_min = 0.3
+        cookie_exp_sec = 25
+
+    # 產生 JWT
+    jwt_token = generate_jwt(
+        username=username,
+        aaguid=aaguid,
+        sign_count=sign_count,
+        source=source,
+        destination=destination,
+        role="user"
+    )
+    if from_oauth:
+        tokenName =  re.sub(r'\W+', '_', source) + "_token"
+    else:
+        tokenName = "token"
+    # ⬇⬇⬇ 回傳 JSON 給前端用於 postMessage 傳回 B（跨站 OAuth 流程用）
+    # 這份 JWT 是給前端 JavaScript 用來傳回給 opener（B 網站），不是靠 Cookie 帶出
+    response = make_response(jsonify({
+        "status": "ok",
+        "message": "成功認證",
+        "signCount": sign_count,
+    }))
+
+    # ⬇⬇⬇ 同時寫入 JWT 到 Cookie，給本網站（A）後續請求驗證使用
+    # 這份 JWT 是 A 自己用的，用來支援非 OAuth 的情境（例如直接登入 A 網站）
+    response.set_cookie(
+        key=tokenName,
+        value=jwt_token,
+        secure=True,
+        samesite="None",
+        max_age=cookie_exp_sec
+    )
+
+    return response

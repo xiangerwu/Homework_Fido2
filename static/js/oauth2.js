@@ -13,6 +13,7 @@ import {
 
 window.oauth_login = oauth_login;
 
+// 彈出式視窗的 登入按鈕觸發函式
 async function oauth_login() {
     const username = document.getElementById("username").value;
     if (!username) {
@@ -22,10 +23,11 @@ async function oauth_login() {
 
     try {
         // 取得 state 參數
-        const client_id = getURLParam("client_id");
-        const redirect_uri = getURLParam("redirect_uri");
-        const state = getURLParam("state");
-        const scope = getURLParam("scope");
+        const dist          = getURLParam("dist");
+        const state         = getURLParam("state");
+        const scope         = getURLParam("scope");
+        const source        = getURLParam("source");
+        // const redirect_uri  = getURLParam("redirect_uri");
         const response_type = getURLParam("response_type");
 
 
@@ -53,6 +55,8 @@ async function oauth_login() {
         // ✅ 第四步：組裝驗證資料並送回後端驗證
         const verify_credential = { 
             username: username, 
+            source: source,
+            dist: dist,
             credential: convertCredential(credential, navigator.userAgent), 
         };
 
@@ -67,11 +71,25 @@ async function oauth_login() {
 
         // 嘗試從 cookie 取出 token，這裡只是為了確認有沒有驗證成功
         // 確認完這個 token 之後就不需要了
-        const token = getCookie("token");
+        const normalizedSource = source ? normalizeSource(source) : null;
+        const cookieName = normalizedSource ? `${normalizedSource}_token` : "token";
+        const token = getCookie(cookieName);
         if (token) {
+            
+            if (verifyResult.status == "ok"){            
+                window.opener.postMessage({
+                    status: "login_success",
+                    token: token,
+                    state: state
+                }, "*");
+                window.close();  // ✅ 直接關閉視窗
+
+            }
+            // 先保留用不到後刪除
             const params = new URLSearchParams({
-                client_id: client_id,
-                redirect_uri: redirect_uri,
+                source: source,
+                dist: dist,
+                // redirect_uri: redirect_uri,
                 response_type: response_type,
                 scope: scope,
                 state: state,
@@ -95,3 +113,7 @@ async function oauth_login() {
 export { 
     oauth_login 
 };
+
+function normalizeSource(source) {
+    return source.replace(/\W+/g, "_");  // 等效於 Python 的 re.sub(r'\W+', '_', ...)
+}
