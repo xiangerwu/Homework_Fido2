@@ -93,31 +93,34 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
         return jwk.JWK(**res.json()["keys"][0])
     # 如果來源是本地檔案，則從檔案讀取公鑰
     else:
-        with open(url_or_path, "rb") as f:
+        with open(url_or_path, "rb") as f: 
             return jwk.JWK.from_pem(f.read())
 
-# 函數：讀取相對應來源的公鑰
-# 作用:將 payload 使用來源的公鑰加密
-def encrypt_payload(payload: dict, recipient_key: jwk.JWK) -> str:
-    print("加密 payload")
-    # 1. 載入 JWK 轉換為 cryptography 公鑰物件
-    public_key_obj = serialization.load_pem_public_key(
-        recipient_key.export_to_pem()
-    )
+# 使用 JWE 標準加密 payload 
+def encrypt_payload_with_jwe(payload: dict, recipient_key: jwk.JWK) -> str:
+    """
+    使用 JWE（RSA-OAEP + A256GCM）加密 payload，支援長內容。
 
-    # 2. 加密 payload（轉為亂碼 bytes）
+    參數:
+        payload (dict): 要加密的資料
+        recipient_key (jwk.JWK): 對方的公鑰 (JWK 格式)
+
+    回傳:
+        str: JWE 字串（Compact Serialization）
+    """
+    # 將 payload 轉為 JSON 並編碼為 UTF-8 bytes
     plaintext = json.dumps(payload).encode("utf-8")
-    encrypted = public_key_obj.encrypt(
-        plaintext,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
 
-    # 3. 編碼為 base64url 字串，便於放入 JWT claims 中
-    return urlsafe_b64encode(encrypted).decode("utf-8").rstrip("=")
+    # 建立 JWE 加密物件
+    jwetoken = jwe.JWE(
+        plaintext=plaintext,
+        protected={"alg": "RSA-OAEP", "enc": "A256GCM"}
+    )
+    # 加入收件人（即用 recipient_key 對稱金鑰加密）
+    jwetoken.add_recipient(recipient_key)
+
+    # 回傳 Compact 格式（str）
+    return jwetoken.serialize(compact=True)
 
 # 函數：產生 JWT Token
 def generate_jwt(
@@ -167,7 +170,7 @@ def generate_jwt(
     if source in SOURCE_KEY_URLS:
         print("將 payload加密")
         recipient_key = load_public_key_by_source(source)
-        claims = encrypt_payload(payload, recipient_key)
+        claims = encrypt_payload_with_jwe(payload,recipient_key)
     else:
         print("不將 payload加密")
         claims = payload  # 不加密
@@ -181,7 +184,7 @@ def generate_jwt(
     print("用私鑰 A 簽章")
     token = jwt.JWT(header={"alg": "RS256", "kid": "A1"}, claims=claims)
     token.make_signed_token(private_key)
-    jwt_str = token.serialize()
+    jwt_str = token.serialize(compact=True)
     return jwt_str
 
 # 函數：解碼 JWT Token
@@ -190,39 +193,40 @@ def generate_jwt(
 # 回傳: payload 字典，或 None 以及錯誤訊息
 def decode_jwt(jwt_str: str):
     try:
-        print("驗簽 JWT ")
-        # Step 1: 驗章（用 A 的公鑰）
         with open("server_key/server.crt", "rb") as f:
             public_key = jwk.JWK.from_pem(f.read())
-        token = jwt.JWT(jwt=jwt_str, key=public_key)
-        encrypted_b64 = token.claims  # 這是 base64url 編碼的亂碼字串
-        print("解碼 JWT")
-        # Step 2: 解密 payload（用 A 的私鑰）
-        encrypted_bytes = urlsafe_b64decode(encrypted_b64 + '==')  # 補 "=" 避免 padding 問題
+        # Step 3: 解密 payload（使用 A 自己的私鑰）
         with open("server_key/server.key", "rb") as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=None)
-        decrypted = private_key.decrypt(
-            encrypted_bytes,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None,
-            )
-        )
-        payload = json.loads(decrypted.decode("utf-8"))
+            private_key = jwk.JWK.from_pem(f.read())
 
-        # Step 3: 驗證發行者
+        # Step 1: 驗章（用 A 的公鑰）
+        print("驗簽 JWT ")
+        token = jwt.JWT(jwt=jwt_str, key=public_key)
+        # Step 2: 從 token.claims 中讀出 JWE 字串（加密的 payload）
+        print("📦 取得加密的 JWE Payload")
+        encrypted_jwe_str = token.claims
+        jwe_token = jwe.JWE()
+        print("解密 payload")
+        jwe_token.deserialize(encrypted_jwe_str, key=private_key)
+
+        # Step 4: 解析 payload 為 JSON
+        payload = json.loads(jwe_token.payload.decode("utf-8"))
+        print("✅ 解密完成，Payload:", payload)
+
+        # Step 5: 驗證發行者
         if payload.get("iss") != ORIGIN:
             raise ValueError("無效的發行者")
 
         return payload, None
 
-    except JWException as e:
-        return None, f"JWT 錯誤: {str(e)}"
-    except ValueError as e:
-        return None, str(e)
+    except jwt.JWTExpired as e:
+        return None, f"❌ JWT 過期: {str(e)}"
+    except jwt.JWTInvalidClaimFormat as e:
+        return None, f"❌ Claim 格式錯誤: {str(e)}"
+    except jwk.JWException as e:
+        return None, f"❌ 金鑰錯誤: {str(e)}"
     except Exception as e:
-        return None, f"其他錯誤: {e}"
+        return None, f"❌ 其他錯誤: {e}"
     
 
 # 函數：檢查 JWT Token 是否存在
