@@ -6,6 +6,8 @@ from flask_sslify import SSLify
 from fido2.server import Fido2Server
 from fido2.webauthn import PublicKeyCredentialRpEntity
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+import hashlib
 
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)
@@ -15,7 +17,8 @@ server = Fido2Server(fido2_rp, attestation="DIRECT")
 
 # 創建 Flask 應用，設定靜態資料夾與模板資料夾
 app = Flask(__name__, static_folder="static", template_folder="templates")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
+app.wsgi_app = ProxyFix(app.wsgi_app,  x_for=2, x_proto=2)
+
 # 設定 CORS 跨域請求
 CORS(app, origins=ORIGIN, supports_credentials=True)
 # 設定 SSL
@@ -116,20 +119,26 @@ def clear():
         # 如果密碼不正確，則返回錯誤訊息
         return jsonify({"status": "error", "error": "密碼錯誤"})
 
+# 引入拆分的路由
+from routes.register import register_bp
+from routes.authentication import auth_bp
+from routes.oauth2 import oauth_bp
+# 用於註冊的路由
+app.register_blueprint(register_bp, url_prefix="/register")
+# 用於驗證的路由
+app.register_blueprint(auth_bp, url_prefix="/authentication")
+# 用於 OAuth 的路由
+app.register_blueprint(oauth_bp, url_prefix="/oauth2")
+    
+
+# 反代理路由
+application = app
+
+
 
 # __name__ == "__main__" 代表你執行這個模塊時，它才會運行app.run()
 # 通常用於測試，當模塊被引入到其他模塊或程式時，app.run()不會運行
 if __name__ == "__main__":
-    # 引入拆分的路由
-    from routes.register import register_bp
-    from routes.authentication import auth_bp
-    from routes.oauth2 import oauth_bp
-    # 用於註冊的路由
-    app.register_blueprint(register_bp, url_prefix="/register")
-    # 用於驗證的路由
-    app.register_blueprint(auth_bp, url_prefix="/authentication")
-    # 用於 OAuth 的路由
-    app.register_blueprint(oauth_bp, url_prefix="/oauth2")
-    
     # app.run(host=g_IP, port=g_port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
     app.run(host=g_IP, port=g_port, debug=True)
+
