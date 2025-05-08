@@ -23,16 +23,20 @@ g_secret_key = os.urandom(32)  # secret_key 使用亂數生成
 g_port = 5000  # 預設 Flask 埠號
 
 # 設定 RP 相關資訊
-RP_ID = "fido2-web.akitawan.moe"  # 改成你的正式域名
-ORIGIN = "https://fido2-web.akitawan.moe"  # 改成你的正式域名，且使用 HTTPS
+# RP_ID = "fido2-web.akitawan.moe"  # 改成你的正式域名
+# 代理用
+RP_ID = "proxy.akitawan.moe"  # Fido2 用到
+ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
+
+
 # 設定常用變數
 db_users = "Database/fido2_user.db"
 
 
 # 來源與 JWKS URL 對照表
 SOURCE_KEY_URLS = {
-    ORIGIN: "server_key/server.crt",
-    "oauth.akitawan.moe": "http://127.0.0.1:5001/jwks.json",
+    "akitawan.moe": "server_key/server.crt",
+    "oauth.akitawan.moe": "https://proxy.akitawan.moe/wu/oauth/jwks.json",
     "NCtA-client":"",
     # 可擴充更多來源
 }
@@ -86,6 +90,7 @@ def unsanitize_username(safe_username):
 def load_public_key_by_source(source: str) -> jwk.JWK:
     # 檢查來源是否在對照表中
     url_or_path = SOURCE_KEY_URLS[source]
+    print(f"取得來源 {source} 的公鑰: {url_or_path}")
     # 如果來源是 URL，則從 URL 下載公鑰
     if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
         res = requests.get(url_or_path)
@@ -93,6 +98,7 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
         return jwk.JWK(**res.json()["keys"][0])
     # 如果來源是本地檔案，則從檔案讀取公鑰
     else:
+        print(f"從本地檔案讀取公鑰: {url_or_path}")
         with open(url_or_path, "rb") as f: 
             return jwk.JWK.from_pem(f.read())
 

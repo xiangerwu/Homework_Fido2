@@ -3,7 +3,6 @@
 // 它會向後端發送登入請求，並獲取 JWT token
 // 然後將 token 傳回主頁面
 import { 
-    sendRequest,
     base64UrlToUint8Array, 
     convertCredential,
     getCookie,
@@ -11,6 +10,35 @@ import {
     
 } from "./web_functions.js";
 
+window.base_path = window.location.pathname.split("/oauth2/authorize")[0].replace(/\/+$/, ''); // 移除尾端斜線
+
+async function sendRequest(url, method, data) {
+    try {
+        const response = await fetch(
+            window.base_path + url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: data ? JSON.stringify(data) : null,
+            credentials: "include", // 這行是讓 cookie 可以傳送到後端
+        });
+        const text = await response.text();
+        let result;
+
+        try {
+            result = JSON.parse(text);
+        } catch {
+            result = { error: "❌ 後端回傳非 JSON 格式", raw: text };
+        }
+
+        if (!response.ok) {
+            result.error = result.error || `❌ 錯誤狀態碼 ${response.status}`;
+        }
+
+        return result;
+    } catch (error) {
+        return { error: "❌ 請求失敗：" + error.message };
+    }
+}
 window.oauth_login = oauth_login;
 
 // 彈出式視窗的 登入按鈕觸發函式

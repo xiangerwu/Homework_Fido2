@@ -40,7 +40,9 @@ window.logout = logout;
 document.addEventListener("DOMContentLoaded", updateUserList);
 
 // 根據當前主機來設置不同的 URL
-window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
+// window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
+// 根據部署環境動態取得 base path
+window.base_path = window.location.pathname.split("\main")[0].replace(/\/+$/, ''); // 移除尾端斜線
 
 
 // WebAuthn 註冊 register 函式
@@ -290,7 +292,7 @@ async function updateUserList() {
 
     try {
         // 發送 GET 請求到後端 API
-        const response = await fetch(window.direct_url + "/users");
+        const response = await fetch(window.base_path+"/users");
 
         // 確保回應成功
         if (!response.ok) {

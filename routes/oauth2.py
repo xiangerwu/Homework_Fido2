@@ -46,7 +46,7 @@ from app import server as app_server
 
 """ Create Blueprint """
 # 創建 Blueprint
-oauth_bp = Blueprint("oauth", __name__)
+oauth_bp = Blueprint("oauth2", __name__)
 
 """ OAuth Functions """
 # 網頁路徑 /oauth2/authorize
@@ -56,7 +56,7 @@ oauth_bp = Blueprint("oauth", __name__)
 def authorize():
     print(" 收到 /authorize 請求")
     print(" Cookies:", request.cookies)
-
+    print("args:", request.args)
     # ✅ Step 1: 擷取來自 B 的參數
     received_source         = request.args.get("source")
     received_distination    = request.args.get("dist")
@@ -106,7 +106,7 @@ def authorize():
 
 # 網頁路徑 /oauth2/.well-known/jwks.json
 # 作用: 公開 JWT 金鑰
-@oauth_bp.route("/.well-known/jwks.json")
+@oauth_bp.route("/jwks.json")
 def jwks():
     with open("server_key/server.crt", "rb") as f:
         cert = x509.load_pem_x509_certificate(f.read(), default_backend())

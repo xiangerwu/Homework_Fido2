@@ -1,4 +1,6 @@
-window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
+// window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
+// 根據部署環境動態取得 base path
+window.base_path = window.location.pathname.split("\main")[0].replace(/\/+$/, ''); // 移除尾端斜線
 
 // 函式名稱: sendRequest
 // 作用: 向後端發送請求
@@ -9,7 +11,7 @@ window.direct_url = "https://fido2-web.akitawan.moe"; // 上線環境
 async function sendRequest(url, method, data) {
     try {
         const response = await fetch(
-            window.direct_url + url, {
+            window.base_path + url, {
             method: method,
             headers: { "Content-Type": "application/json" },
             body: data?JSON.stringify(data): null,

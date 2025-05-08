@@ -8,7 +8,7 @@
     
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style2.css') }}?v=2" />
-    <link rel="icon" href="https://fido2-web.akitawan.moe/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="{{url_for('static',filename='images/favicon.png') }}" type="image/x-icon">
 
 </head>
 
@@ -20,8 +20,8 @@
         <br />
         <button onclick="oauth_login()">登入</button>
     </div>
-    <script type="module" src="/static/js/oauth2.js"></script>
-    <script type="module" src="/static/js/web_functions.js"></script>
+    <script type="module" src="{{ url_for('static',filename='js/web_functions.js') }}"></script>
+    <script type="module" src="{{ url_for('static',filename='js/oauth2.js') }}"></script>
 </body>
 
 </html>

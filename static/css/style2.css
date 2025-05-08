@@ -1,6 +1,6 @@
 body
 {
-  background-image: url("/static/images/doro_point.png");  /* 背景圖路徑 */
+  background-image: url("../images/doro_point.png");  /* 背景圖路徑 */
   background-size: cover;           /* 讓圖片填滿整個視窗 */
   background-position: center center;      /* 置中顯示 */
   background-repeat: no-repeat;     /* 防止重複 */

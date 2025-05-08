@@ -8,7 +8,7 @@
 
 .welcome-bg {
   position: relative;
-  background-image: url("/static/images/welcome.gif");
+  background-image: url("../images/welcome.gif");
   background-size: auto;
   background-position: left center;
   background-repeat: no-repeat;
