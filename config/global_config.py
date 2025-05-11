@@ -25,7 +25,7 @@ g_port = 5000  # 預設 Flask 埠號
 # 設定 RP 相關資訊
 # RP_ID = "fido2-web.akitawan.moe"  # 改成你的正式域名
 # 代理用
-RP_ID = "proxy.akitawan.moe"  # Fido2 用到
+RP_ID = "akitawan.moe"  # Fido2 用到
 ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
 
