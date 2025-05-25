@@ -38,6 +38,7 @@ SOURCE_KEY_URLS = {
     "akitawan.moe": "server_key/server.crt",
     "oauth.akitawan.moe": "https://proxy.akitawan.moe/wu/oauth/jwks.json",
     "NCtA-client":"",
+    "akitawan.moe/en/":"https://proxy.akitawan.moe/en/1/jwks.json",
     # 可擴充更多來源
 }
 """ General Functions """
@@ -172,16 +173,21 @@ def generate_jwt(
     if sign_count is not None:
         payload["signCount"] = sign_count
 
+    """
+    將 payload 加密
+    """
     # 是否加密 payload 取決於 source 是否在對照表中
     if source in SOURCE_KEY_URLS:
-        print("將 payload加密")
+        print(">> 將   payload 加密")
         recipient_key = load_public_key_by_source(source)
         claims = encrypt_payload_with_jwe(payload,recipient_key)
     else:
-        print("不將 payload加密")
+        print(">> 不將 payload 加密")
         claims = payload  # 不加密
    
-    #  
+    """
+    用私鑰簽名 JWT Token
+    """
     # 讀取 server_key/server.key
     print("讀取私鑰 A")
     with open("server_key/server.key", "rb") as f:
