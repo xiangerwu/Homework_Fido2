@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>登入成功</title>
+</head>
+
+<body>
+    <script>
+        // ✅ 告知主頁登入成功，導回入口網站
+        window.opener.location = "{{ redirect_url }}";
+        window.close();
+    </script>
+    <p>✅ 登入成功，正在導回主頁…</p>
+</body>
+
+</html>

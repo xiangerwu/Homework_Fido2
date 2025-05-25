@@ -28,47 +28,44 @@ app.secret_key = g_secret_key
 """ 註冊路由部份 """
 """
 現有路由列表
-- /  首頁
-- /favicon.ico  網站圖示
+- /login_decision: 用於處理登入決策的路由
 """
-# icon
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static/images'),
-        'favicon.png',
-        mimetype='image/png'
-    )
 
-# 首頁
+
+# 登入決策
 @app.route("/")
-@attach_jwt_if_available
-def home():
-    payload = request.jwt_payload
-    username = payload.get("username") if payload else None
-    # 如果 payload 有值，代表有登入，否則沒有登入
+@app.route("/login_decision")
+@attach_jwt_if_available_only_sign
+def decision():
+    print("進入登入決策頁面")
+    payload = request.jwt_payload  # 裝飾器已經驗簽好
+
     if payload:
-        print(f"登入使用者: {username}")
-        #login_level = payload.get("login_level", 0)  # 預設登入等級為 0
-        login_level = 1  # 先預設等級為 1，後續可以根據實際情況調整
-        if login_level == 0:
-            print("登入等級為 0，無法存取")
-            return jsonify({"error": "無權限存取"}), 403
-        else:
-            print(f"登入等級: {login_level}")
-            # 根據登入等級決定顯示的內容
-            if login_level == 1:
-                print("使用者為一般使用者")
-            elif login_level == 2:
-                print("使用者為管理員")
-            elif login_level == 3:
-                print("使用者為超級管理員")
+        print("JWT Token 驗簽成功:", payload)
+        resp = make_response(render_template("post_login_close.html", redirect_url="https://proxy.akitawan.moe"))
+        # 如您仍需重新簽發 JWT，可在這裡執行
+        token = request.cookies.get("token")  # 可選：取得原 token 用來寫回
+        if token:
+            resp.set_cookie("token", token, httponly=True, secure=True)
+        return resp
     else:
-        print("未登入或無效的 JWT Token")
-        login_level = 0  # 沒有登入，登入等級為 0
+        print("未檢測到 token 或驗簽失敗，顯示登入頁面")
+        return render_template("popup_redirect.html")
 
 
-    return render_template("index.html", username=username, login_level=login_level)
+
+#判斷存取來源
+@app.route("/check_origin")
+def check_origin():
+    # 取得請求的來源
+    origin = request.headers.get("Origin")
+    print(f"請求來源: {origin}")
+
+    # 檢查來源是否在允許的列表中
+    if origin in ORIGIN:
+        return jsonify({"message": "合法來源"}), 200
+    else:
+        return jsonify({"message": "非法來源"}), 403
 
 # 主要測試頁面
 # 反代理路由
