@@ -10,7 +10,7 @@
 
 2. 設置 `.vscode/launch.json` 以便在 Visual Studio Code 中進行偵錯。
 
-3. 資料庫採用 SQLite ，之後再補
+
 
 ## 專案說明
 

@@ -2,44 +2,29 @@
 <html lang="zh-TW">
 
 <head>
-    <meta charset="UTF-8">
-    <title>首頁</title>
-    <script>
-        function openOAuthPopup() {
-
-            const oauthUrl = "{{ url_for('oauth2.authorize', client_id='test-client',source='akitawan.moe', dist='proxy.akitawan.moe/wu/fido2/', redirect_uri='/oauth/callback', state='abc123', response_type='JWT') | safe }}";
-
-            const popup = window.open(
-                oauthUrl,
-                "oauth_popup",
-                "width=750,height=400,resizable=no,scrollbars=no,toolbar=no,menubar=no"
-            );
-            // const popup = window.open( // This line is redundant and should be removed
-            //     "/oauth2/authorize?client_id=test-client&redirect_uri=/oauth/callback&state=abc123&response_type=code",
-            //     "oauth_popup",
-            //     "width=750,height=400,resizable=no,scrollbars=no,toolbar=no,menubar=no"
-            // );
-
-            window.addEventListener("message", (event) => {
-                // 建議加上 origin 驗證
-                console.log("收到 popup 回傳資料：", event.data);
-
-                if (event.data.token) {
-                    alert("登入成功！收到 Token: " + event.data.token);
-                    // 可以儲存到 localStorage 或觸發登入邏輯
-                }
-            });
-        }
-    </script>
-    <link rel="icon" href="{{ url_for('favicon') }}" type="image/x-icon">
-
+    <meta charset="UTF-8" />
+    <title>Proxy反代理</title>
+    <script type="module" src="{{ url_for('static',filename='js/script.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="icon" href="/wu/fido2/static/images/favicon.png" type="image/x-icon">
 </head>
 
 <body>
-    <h1>Hello, World!</h1>
-    <p><a href="{{ url_for('main') }}">點擊進入 WebAuthn 環節</a></p>
-    <p><a href="#" onclick="openOAuthPopup(); return false;">點擊進入 OAuth 環節（彈出視窗）</a></p>
-    <p><a href="{{ url_for('oauth2.jwks') }}">公開金鑰</a></p>
+    <div class="background-layer">
+        <img src="{{ url_for('static', filename='images/loading_background.png') }}" class="background loading-bg">
+        <img src="{{ url_for('static', filename='images/background.png') }}" class="background main-bg">
+    </div>
+    <div class="card-container">
+        
+
+        <div class="hand" id="hand"></div>
+
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+    <script>
+        const LOGIN_LEVEL = {{ login_level }};
+        const USER_NAME = "{{ username }}";
+    </script>
 </body>
 
 </html>

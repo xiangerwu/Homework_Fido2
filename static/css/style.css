@@ -1,196 +1,98 @@
-.row {
-    display: flex;
-    align-items: flex-start; /* 讓 `row` 的子元素不受展開影響 */
-}
-.col-md-6-right {
-    width: 120%; /*讓右側擴大 */
-}
-
-.welcome-bg {
-  position: relative;
-  background-image: url("../images/welcome.gif");
-  background-size: auto;
-  background-position: left center;
-  background-repeat: no-repeat;
-  height: 200px; /* 可依需求調整 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+body, html {
+margin: 0;
+padding: 0;
+height: 100%;
+overflow: hidden;
+font-family: sans-serif;
 }
 
-/* .bg-overlay {
+.card-container {
+position: relative;
+width: 100%;
+height: 100%;
+}
+
+.background-layer {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.4); /* 可改深淺 */
-  /* z-index: 0; */
-/* } */ 
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
 
-.welcome-text {
+.background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  top: 0;
+  left: 0;
+  transition: opacity 3.6s ease;
+}
+
+.main-bg {
+  opacity: 0; /* 預設透明，載入完才 fade in */
+}
+.hand {
+  position: absolute;
+  bottom: -14%;
+  right: 600px;
+  display: flex;
+  gap: 0;
+  z-index: 10;
+  transform: translateX(10%);
+}
+
+.card-wrapper {
   position: relative;
-  z-index: 1;
-  color: white;
-  text-align: center;
+  width: 0;
+  height: 0;
+  overflow: visible;
 }
 
-
-.title-glass-effect-container {
-    text-align: center; /* 讓 inline-block 元素置中 */
-}
-.title-glass-effect {
-    background: rgba(39, 39, 39, 0.308);
-    backdrop-filter: blur(8px);
-    padding: 15px 30px;
-    border-radius: 15px;
-    display: inline-block; /*保持原設定*/
+.card {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform-origin: bottom center;
+  
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  pointer-events: auto;
 }
 
-/* 新增外層置中容器 */
-.title-container {
-    text-align: center; /* 用來置中內部 inline-block 元素 */
+.card img {
+  width: 160px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.3s ease;
+  cursor: pointer;
 }
 
-.glass-inner-top-padding {
-    padding-top: 20px !important; /* 強制上方內距為 20px */
+.card:hover {
+  transform: translateY(-20px) scale(1.1);
+  z-index: 20;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
-.container-fluid {
-    padding-left: 380px;
-    padding-right: 50px;
+.card.selected {
+  transform: translateY(-600px) scale(1.1) !important;
+  z-index: 25;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3);
+}
+.hand a {
+  text-decoration: none;
 }
 
-/* 讓前兩欄有懸浮感 + 毛玻璃 */
-.glass-effect {
-    /* 半透明白色背景 */
-    background: rgba(39, 39, 39, 0.308);
-    /* 毛玻璃效果 */
-    backdrop-filter: blur(20px);
-    /* 圓角 */
-    border-radius: 15px;
-    /* 懸浮陰影 */
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-body {
-    /* background-image: url("https://picsum.photos/1920/1080"); */
-    background-color: #00000000;
-    background-size: cover;
-    /* 讓圖片完整覆蓋畫面 */
-    background-position: center center;
-    /* 讓圖片水平 & 垂直置中 */
-    background-repeat: no-repeat;
-    /* 防止圖片重複 */
-    background-attachment: fixed;
-    /* 讓背景固定不隨滾動變化 */
-}
-
-.custom-collapse {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-in-out;
-}
-.custom-collapse.show {
-    max-height: 1000px; /* 設定較大的值，確保可以展開 */
-}
-
-/* 讓左右兩欄之間有間距 */
-.container-fluid .row {
-    gap: 30px; /* 讓左右欄分開，避免太擠 */
-}
-
-/* 調整表格字型大小 */
-.table-style {
-    font-size: 16px; /* 設定適當的字型大小 */
-}
-
-/* 讓表格內的文字水平 & 垂直置中 */
-.table-style th,
-.table-style td {
-    text-align: center; /* 水平置中 */
-    vertical-align: middle; /* 垂直置中 */
-}
-
-/* 確保在小螢幕時自適應，避免太窄或太寬 */
-.responsive-container {
-    max-width: 1200px; /* 限制最大寬度，防止過寬 */
-    margin: 0 auto; /* 讓內容置中 */
-    padding-left: 15px;
-    padding-right: 15px;
-}
-
-/* 手機適應調整 */
-@media (max-width: 768px) {
-    .responsive-container {
-        max-width: 100%; /* 小螢幕時佔滿 */
-        padding: 10px;
-    }
-
-    /* 讓左右欄上下排列，而非並排 */
-    .row {
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    /* 確保左右欄在手機上佔滿 */
-    .col-md-5 {
-        width: 100% !important;
-    }
-
-    .glass-effect {
-        width: 100%; /* 避免毛玻璃區塊變得太窄 */
-        max-width: 100%;
-        padding: 20px;
-    }
-}
-
-.marquee-container {
-    position: fixed; /* 使跑馬燈不固定 */
-    top: 0;
-    left: 0;
-    width: 100vw; /* 佔據整個視窗寬度 */
-    height: 100vh; /* 佔滿整個視窗高度 */
-    background-color: transparent; /* 背景透明 */
-    overflow: hidden; /* 隱藏超出部分 */
-    z-index: -1; /* 設置為較低的層級，使它位於其他元素之下 */
-    
-}
-
-.marquee-text {
-    display:flex;
-    white-space: nowrap; /* 防止換行 */
-    font-size: 30px; /* 文字大小 */
-    padding: 10px 0;
-    opacity: 0; /* 一開始文字隱藏 */
-    transform: translateX(100vw); /* 一開始從視窗右邊以外開始 */
-    animation: marquee 10s linear infinite, fadeIn 1s ease-in forwards; /* 設定滾動動畫 */
-    animation-fill-mode: forwards; /* 動畫結束後保留動畫結束狀態 */
-    animation-delay: 5s; /* 初始沒有延遲，會在 JS 動態設置 */
-}
-
-/* 每行文字上下分佈 */
-.marquee-text:nth-child(odd) {
-    animation-delay: 0s;
-}
-
-.marquee-text:nth-child(even) {
-    animation-delay: 1s;
-}
-/* 動畫效果，讓文字從右到左滾動 */
-@keyframes marquee {
-    0% {
-        transform: translateX(100vw); /* 開始位置，從右邊開始 */
-    }
-    100% {
-        transform: translateX(-100vw); /* 結束位置，滾動到左邊 */
-    }
-}
-
-/* 顯示文字動畫 */
-@keyframes fadeIn {
-    0% {
-        opacity: 0; /* 開始時文字隱藏 */
-    }
-    100% {
-        opacity: 1; /* 結束時顯示 */
-    }
+/* 保證 tooltip 浮在最上層 */
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 18px;
+  pointer-events: none;
+  display: none;
+  z-index: 9999;
+  white-space: nowrap;
 }

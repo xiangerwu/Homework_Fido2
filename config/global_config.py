@@ -29,31 +29,11 @@ RP_ID = "akitawan.moe"  # Fido2 用到
 ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
 
-# 設定常用變數
-db_users = "Database/fido2_user.db"
-
-
-# 來源與 JWKS URL 對照表
 SOURCE_KEY_URLS = {
-    "akitawan.moe": "server_key/server.crt",
-    "oauth.akitawan.moe": "https://proxy.akitawan.moe/wu/oauth/jwks.json",
-    "NCtA-client":"",
-    # 可擴充更多來源
+    "fido2": "https://proxy.akitawan.moe/wu/fido2/oauth2/jwks.json",  # FIDO2 的 JWKS URL
 }
+
 """ General Functions """
-
-# 函式名稱: encode_bytes_to_base64
-# 作用: 遞歸將 bytes 類型轉換為 Base64 字串，確保 JSON 序列化
-# 參數: JSON
-def encode_bytes_to_base64(data):
-    if isinstance(data, bytes):
-        return base64.b64encode(data).decode("utf-8")
-    elif isinstance(data, dict):
-        return {key: encode_bytes_to_base64(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [encode_bytes_to_base64(item) for item in data]
-    return data
-
 
 # 函式名稱: decode_base64_to_bytes
 # 作用: 遞迴將 Base64 字串轉換為 bytes 類型，確保 JSON 反序列化
@@ -101,110 +81,16 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
         print(f"從本地檔案讀取公鑰: {url_or_path}")
         with open(url_or_path, "rb") as f: 
             return jwk.JWK.from_pem(f.read())
-
-# 使用 JWE 標準加密 payload 
-def encrypt_payload_with_jwe(payload: dict, recipient_key: jwk.JWK) -> str:
-    """
-    使用 JWE（RSA-OAEP + A256GCM）加密 payload，支援長內容。
-
-    參數:
-        payload (dict): 要加密的資料
-        recipient_key (jwk.JWK): 對方的公鑰 (JWK 格式)
-
-    回傳:
-        str: JWE 字串（Compact Serialization）
-    """
-    # 將 payload 轉為 JSON 並編碼為 UTF-8 bytes
-    plaintext = json.dumps(payload).encode("utf-8")
-
-    # 建立 JWE 加密物件
-    jwetoken = jwe.JWE(
-        plaintext=plaintext,
-        protected={"alg": "RSA-OAEP", "enc": "A256GCM"}
-    )
-    # 加入收件人（即用 recipient_key 對稱金鑰加密）
-    jwetoken.add_recipient(recipient_key)
-
-    # 回傳 Compact 格式（str）
-    return jwetoken.serialize(compact=True)
-
-# 函數：產生 JWT Token
-def generate_jwt(
-    username: str,
-    aaguid: str = None,
-    sign_count: int = None,
-    source: str = None,
-    destination: str = None,
-    role: str = "user",
-) -> str:
-    """
-    產生 JWT Token
-
-    參數:
-        username (str): 使用者識別 ID
-        aaguid (str): FIDO2 裝置的識別碼（可選）
-        sign_count (int): FIDO2 裝置的簽名計數器（可選）
-        role (str): 使用者權限（預設為 'user'）
-        "source"：來源網站
-        "destination"：目的地網站
-
-    回傳:
-        str: JWT 字串（已簽章）
-    """
-    # 取得當前時間
-    now = datetime.now(timezone.utc)
-    exp = now + timedelta(minutes=10)
-
-    # 產生 JWT  的 payload  
-    print("包裝 payload")
-    payload = {
-        "sub": username,
-        "role": role,
-        "iat": int(now.timestamp()),  # 簽發時間
-        "exp": int(exp.timestamp()),  # 到期時間
-        "src": source,  # 來源網站
-        "aud": destination,  # 目的地網站
-        "iss": ORIGIN,  # 發行者
-    }
-    # 如果有提供 aaguid 和 sign_count，則加入 payload
-    if aaguid:
-        payload["aaguid"] = aaguid
-    if sign_count is not None:
-        payload["signCount"] = sign_count
-
-    # 是否加密 payload 取決於 source 是否在對照表中
-    if source in SOURCE_KEY_URLS:
-        print("將 payload加密")
-        recipient_key = load_public_key_by_source(source)
-        claims = encrypt_payload_with_jwe(payload,recipient_key)
-    else:
-        print("不將 payload加密")
-        claims = payload  # 不加密
-   
-    #  
-    # 讀取 server_key/server.key
-    print("讀取私鑰 A")
-    with open("server_key/server.key", "rb") as f:
-        private_key = jwk.JWK.from_pem(f.read())
-    # 用私鑰簽名 JWT
-    print("用私鑰 A 簽章")
-    token = jwt.JWT(header={"alg": "RS256", "kid": "A1"}, claims=claims)
-    token.make_signed_token(private_key)
-    jwt_str = token.serialize(compact=True)
-    return jwt_str
-
+        
 # 函數：解碼 JWT Token
 # 作用: 驗證 JWT Token 的簽名，並解密 payload
 # 參數: JWT Token 字串
 # 回傳: payload 字典，或 None 以及錯誤訊息
+# 入口網站只驗簽
 def decode_jwt(jwt_str: str):
     try:
-        with open("server_key/server.crt", "rb") as f:
-            public_key = jwk.JWK.from_pem(f.read())
-        # Step 3: 解密 payload（使用 A 自己的私鑰）
-        with open("server_key/server.key", "rb") as f:
-            private_key = jwk.JWK.from_pem(f.read())
-
+        public_key = load_public_key_by_source("fido2")
+        private_key = load_public_key_by_source("fido2")  # 假設私鑰與公鑰相同，實際應用中應分開
         # Step 1: 驗章（用 A 的公鑰）
         print("驗簽 JWT ")
         token = jwt.JWT(jwt=jwt_str, key=public_key)
