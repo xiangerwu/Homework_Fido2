@@ -36,7 +36,7 @@ function renderCards(cards) {
         // 卡片主體：加入旋轉與 Y 位移
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
-        cardDiv.style.transform = `rotate(${angle}deg) translateY(-${radius}px)`;
+        cardDiv.style.transform = `rotate(${angle}deg) translateY(-${radius}px) scale(${card.scale || 1})`;
         
 
         // 卡片圖片
@@ -99,7 +99,7 @@ document.addEventListener("click", (e) => {
             allCards.forEach(c => c.classList.remove("selected"));
             card.classList.add("selected"); // 第一次點 → 選中
         }
-
+        
         e.stopPropagation(); // 防止冒泡影響整頁點擊事件
     } else {
         allCards.forEach(c => c.classList.remove("selected")); // 點空白區取消所有選中
