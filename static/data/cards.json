@@ -2,7 +2,7 @@
     "0": [
         {
             "src": "/static/images/card0.jpg",
-            "link": "/wu/fido2/main",
+            "link": "/pdp/login_decision",
             "tooltip": "你還沒準備好",
             "scale": 1.5
         }
@@ -22,13 +22,13 @@
         },
         {
             "src": "/static/images/card3.png",
-            "link": "/en1/",
+            "link": "/en/1/",
             "tooltip": "En Web DEMO",
             "scale": 1
         },
         {
             "src": "/static/images/card4.png",
-            "link": "/en2/",
+            "link": "/en/2/",
             "tooltip": "En Web DEMO",
             "scale": 1
         },

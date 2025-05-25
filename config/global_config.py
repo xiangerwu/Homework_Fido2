@@ -98,16 +98,19 @@ def decode_jwt(jwt_str: str):
         print("📦 取得加密的 JWE Payload")
         encrypted_jwe_str = token.claims
         jwe_token = jwe.JWE()
+        # 先不解密
         print("解密 payload")
-        jwe_token.deserialize(encrypted_jwe_str, key=private_key)
+
+        # jwe_token.deserialize(encrypted_jwe_str, key=private_key)
 
         # Step 4: 解析 payload 為 JSON
-        payload = json.loads(jwe_token.payload.decode("utf-8"))
+        # payload = json.loads(jwe_token.payload.decode("utf-8"))
+        payload = "未解密的 payload，可簽發 JWT"
         print("✅ 解密完成，Payload:", payload)
 
         # Step 5: 驗證發行者
-        if payload.get("iss") != ORIGIN:
-            raise ValueError("無效的發行者")
+        # if payload.get("iss") != ORIGIN:
+            # raise ValueError("無效的發行者")
 
         return payload, None
 

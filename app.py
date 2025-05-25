@@ -45,10 +45,11 @@ def favicon():
 @attach_jwt_if_available
 def home():
     payload = request.jwt_payload
-    username = payload.get("username") if payload else None
+    #  username = payload.get("username") if payload else None
+    username = ("username", "訪客")
     # 如果 payload 有值，代表有登入，否則沒有登入
     if payload:
-        print(f"登入使用者: {username}")
+        # print(f"登入使用者: {username}")
         #login_level = payload.get("login_level", 0)  # 預設登入等級為 0
         login_level = 1  # 先預設等級為 1，後續可以根據實際情況調整
         if login_level == 0:
