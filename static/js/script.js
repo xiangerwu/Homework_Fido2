@@ -3,7 +3,7 @@ let domReady = false;        // HTML 是否載入完成
 let bgReady = false;         // 背景圖片是否載入完成
 let bgLoaded = false;       // 背景圖片是否載入完成
 let jsonReady = false;       // 卡片資料是否載入完成
-//let cardData = [];           // 儲存卡片資料陣列
+let cardData = [];           // 儲存卡片資料陣列
 
 
 // 嘗試執行卡片繪製（須三者皆完成）
@@ -107,10 +107,9 @@ document.addEventListener("click", (e) => {
 });
 
 // --- 載入卡片資料 ---
-fetch("data/cards.json")
+fetch("static/data/cards.json")
     .then(res => res.json())
     .then(cardGroups => {
-        cardData = [];
         if (LOGIN_LEVEL === 0) {
             // 僅顯示等級 0（訪客卡）
             if (cardGroups[0]) {
