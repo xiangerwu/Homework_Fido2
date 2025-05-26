@@ -95,7 +95,7 @@ def users():
 def logout():
     print("🧼 清除 A 的 token cookie")
     response = make_response(jsonify({"status": "ok", "message": "已登出"}))
-    response.set_cookie("token", "", max_age=0, secure=True, samesite="None", path="/")
+    response.set_cookie("fido2_token", "", max_age=0, secure=True, samesite="None", path="/")
     return response
 
 
