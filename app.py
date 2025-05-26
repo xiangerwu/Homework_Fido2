@@ -28,25 +28,15 @@ app.secret_key = g_secret_key
 """ 註冊路由部份 """
 """
 現有路由列表
-- /  首頁
-- /favicon.ico  網站圖示
+- /  入口網站首頁
 """
-# icon
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(
-        os.path.join(app.root_path, 'static/images'),
-        'favicon.png',
-        mimetype='image/png'
-    )
-
-# 首頁
+# 入口
 @app.route("/")
 @attach_jwt_if_available
 def home():
     payload = request.jwt_payload
     #  username = payload.get("username") if payload else None
-    username = ("username", "訪客")
+    username = ("username", "一般使用者")
     # 如果 payload 有值，代表有登入，否則沒有登入
     if payload:
         # print(f"登入使用者: {username}")
