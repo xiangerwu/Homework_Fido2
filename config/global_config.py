@@ -34,13 +34,15 @@ db_users = "Database/fido2_user.db"
 
 
 # 來源與 JWKS URL 對照表
-SOURCE_KEY_URLS = {
-    "akitawan.moe": "server_key/server.crt",
-    "oauth.akitawan.moe": "https://proxy.akitawan.moe/wu/oauth/jwks.json",
-    "NCtA-client":"",
-    "akitawan.moe/en/":"https://proxy.akitawan.moe/en/1/jwks.json",
-    # 可擴充更多來源
-}
+# 暫不加密
+SOURCE_KEY_URLS ={}
+# SOURCE_KEY_URLS = {
+#     "akitawan.moe": "server_key/server.crt",
+#     "oauth.akitawan.moe": "https://proxy.akitawan.moe/wu/oauth/jwks.json",
+#     "NCtA-client":"",
+#     "akitawan.moe/en/":"https://proxy.akitawan.moe/en/1/jwks.json",
+#     # 可擴充更多來源
+# }
 """ General Functions """
 
 # 函式名稱: encode_bytes_to_base64
@@ -166,6 +168,7 @@ def generate_jwt(
         "src": source,  # 來源網站
         "aud": destination,  # 目的地網站
         "iss": ORIGIN,  # 發行者
+        "login_level": 1,  # 登入等級
     }
     # 如果有提供 aaguid 和 sign_count，則加入 payload
     if aaguid:
@@ -207,7 +210,8 @@ def decode_jwt(jwt_str: str):
     try:
         with open("server_key/server.crt", "rb") as f:
             public_key = jwk.JWK.from_pem(f.read())
-        # Step 3: 解密 payload（使用 A 自己的私鑰）
+        # Step 3: 解密 payload
+        # 使用 A 自己的私鑰(只能解自己簽的 JWT)
         with open("server_key/server.key", "rb") as f:
             private_key = jwk.JWK.from_pem(f.read())
 
