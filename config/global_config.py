@@ -90,19 +90,17 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
 def decode_jwt(jwt_str: str):
     try:
         public_key = load_public_key_by_source("fido2")
-        private_key = load_public_key_by_source("fido2")  # 假設私鑰與公鑰相同，實際應用中應分開
+        # private_key = load_public_key_by_source("fido2")  # 假設私鑰與公鑰相同，實際應用中應分開
         # Step 1: 驗章（用 A 的公鑰）
         print("驗簽 JWT ")
         token = jwt.JWT(jwt=jwt_str, key=public_key)
         # Step 2: 從 token.claims 中讀出 JWE 字串（加密的 payload）
-        print("📦 取得加密的 JWE Payload")
-        encrypted_jwe_str = token.claims
-        jwe_token = jwe.JWE()
+        # print("📦 取得加密的 JWE Payload")
+        # encrypted_jwe_str = token.claims
+        # jwe_token = jwe.JWE()
         # 先不解密
-        print("解密 payload")
-
+        print("解密 payload(暫不解密只驗簽)")
         # jwe_token.deserialize(encrypted_jwe_str, key=private_key)
-
         # Step 4: 解析 payload 為 JSON
         # payload = json.loads(jwe_token.payload.decode("utf-8"))
         payload = "未解密的 payload，可簽發 JWT"
@@ -139,6 +137,7 @@ def attach_jwt_if_available(f):
         # 如果 token 不存在，payload 會是 None
         # 如果 token 存在但無效，payload 會是 None
         # 如果 token 存在且有效，payload 會是字典
+        # 只驗簽不解密，payload 會是固定字串
         payload ,jwt_error= decode_jwt(token) if token else (None,None) 
         
         # 若有合法 JWT 就會變成 dict，否則是 None

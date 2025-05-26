@@ -8,12 +8,7 @@
         }
     ],
     "1": [
-        {
-            "src": "/static/images/card1.png",
-            "link": "/wu/fido2/main",
-            "tooltip": "Wu Fido2 DEMO",
-            "scale": 1
-        },
+       
         {
             "src": "/static/images/card2.png",
             "link": "/wu/oauth/",
@@ -30,6 +25,14 @@
             "src": "/static/images/card4.png",
             "link": "/en/2/",
             "tooltip": "En Web DEMO",
+            "scale": 1
+        }
+    ],
+    "2":[
+        {
+            "src": "/static/images/card1.png",
+            "link": "/wu/fido2/main",
+            "tooltip": "Wu Fido2 DEMO",
             "scale": 1
         },
         {
