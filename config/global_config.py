@@ -132,7 +132,8 @@ def attach_jwt_if_available(f):
     def wrapper(*args, **kwargs): 
         # 從請求的 cookies 中獲取 JWT Token        
         print("開始檢查TOKEN")
-        token = request.cookies.get("token")
+        token = request.cookies.get("pdp_token")
+        print(f"取得的 JWT Token: {token}")
         # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
         # 如果 token 存在但無效，payload 會是 None
