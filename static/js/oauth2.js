@@ -100,7 +100,8 @@ async function oauth_login() {
         // 嘗試從 cookie 取出 token，這裡只是為了確認有沒有驗證成功
         // 確認完這個 token 之後就不需要了
         const normalizedSource = source ? normalizeSource(source) : null;
-        const cookieName = normalizedSource ? `${normalizedSource}_token` : "token";
+        // const cookieName = normalizedSource ? `${normalizedSource}_token` : "token";
+        const cookieName = "token"; // 直接使用通用的 token cookie 名稱
         const token = getCookie(cookieName);
         if (token) {
             

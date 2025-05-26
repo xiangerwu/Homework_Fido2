@@ -362,10 +362,10 @@ def generate_jwt_response(
         destination=destination,
         role="user"
     )
-    if from_oauth:
-        tokenName =  re.sub(r'\W+', '_', source) + "_token"
-    else:
-        tokenName = "token"
+    # if from_oauth:
+        # tokenName =  re.sub(r'\W+', '_', source) + "_token"
+    # else:
+    tokenName = "token"
     # ⬇⬇⬇ 回傳 JSON 給前端用於 postMessage 傳回 B（跨站 OAuth 流程用）
     # 這份 JWT 是給前端 JavaScript 用來傳回給 opener（B 網站），不是靠 Cookie 帶出
     response = make_response(jsonify({
@@ -381,7 +381,8 @@ def generate_jwt_response(
         value=jwt_token,
         secure=True,
         samesite="None",
-        max_age=cookie_exp_sec
+        max_age=cookie_exp_sec,
+        path="/"
     )
 
     return response
