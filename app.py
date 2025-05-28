@@ -1,3 +1,4 @@
+import sys
 from config.global_config import *
 from Database.db_manager import DatabaseManager
 from flask import Flask, render_template, jsonify, request, make_response,send_from_directory
@@ -9,6 +10,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.exceptions import NotFound
 import hashlib
+
+# ✅ 把 app.py 所在目錄加進 sys.path（確保子資料夾能被找到）
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
+
 
 # 引入全域變數
 fido2_rp = PublicKeyCredentialRpEntity(id=RP_ID, name=RP_NAME)

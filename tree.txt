@@ -1,0 +1,44 @@
+.
+├── app.py
+├── config
+│   ├── global_config.py
+│   ├── log.py
+│   └── __pycache__
+├── Database
+│   ├── clear_expired_sessions.py
+│   ├── db_manager.py
+│   ├── fido2_user.db
+│   ├── local_db_manager.py
+│   └── __pycache__
+├── __pycache__
+│   └── app.cpython-312.pyc
+├── README.md
+├── requirements.txt
+├── routes
+│   ├── authentication.py
+│   ├── oauth2.py
+│   ├── __pycache__
+│   └── register.py
+├── server_key
+│   ├── server.crt
+│   └── server.key
+├── static
+│   ├── css
+│   ├── images
+│   └── js
+├── templates
+│   ├── auth_success.html
+│   ├── index.html
+│   ├── main.html
+│   └── oauth_login.html
+├── tree.txt
+├── venv
+│   ├── bin
+│   ├── include
+│   ├── lib
+│   ├── lib64 -> lib
+│   ├── pyvenv.cfg
+│   └── share
+└── Yubico_Fido2_Demo介紹.pptx
+
+20 directories, 22 files
