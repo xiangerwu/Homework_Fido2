@@ -37,8 +37,13 @@ function renderCards(cards) {
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
         cardDiv.style.transform = `rotate(${angle}deg) translateY(-${radius}px) scale(${card.scale || 1})`;
-        
+        // 加入內部結構
+        const cardInner = document.createElement("div");
+        cardInner.className = "card-inner";
 
+        const frontDiv = document.createElement("div");
+        frontDiv.className = "card-front";
+  
         // 卡片圖片
         const img = document.createElement("img");
         img.src = card.src;
@@ -49,7 +54,40 @@ function renderCards(cards) {
         a.appendChild(cardDiv);
         wrapper.appendChild(a);
         hand.appendChild(wrapper);
+        frontDiv.appendChild(img);
+        cardInner.appendChild(frontDiv);
+        // 特定卡片加入翻轉標示
+        if (card.flip) {
+            cardDiv.dataset.flip = "true";
+            const backDiv = document.createElement("div");
+            backDiv.className = "card-back";
 
+            const input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = "輸入用戶名稱";
+            input.id = `username_${i}`;
+
+            const buttonsDiv = document.createElement("div");
+            buttonsDiv.className = "buttons";
+
+            const registerBtn = document.createElement("a");
+            registerBtn.href = "/register";
+            registerBtn.textContent = "註冊";
+            registerBtn.className = "button register-btn";
+
+            const loginBtn = document.createElement("a");
+            loginBtn.href = "/login";
+            loginBtn.textContent = "登入";
+            loginBtn.className = "button login-btn";
+
+            buttonsDiv.appendChild(registerBtn);
+            buttonsDiv.appendChild(loginBtn);
+
+            backDiv.appendChild(input);
+            backDiv.appendChild(buttonsDiv);
+
+            cardInner.appendChild(backDiv);
+        }
         // tooltip 行為設定
         a.addEventListener("mouseenter", () => {
             tooltip.textContent = a.dataset.tooltip;
@@ -94,15 +132,26 @@ document.addEventListener("click", (e) => {
         const link = card.closest("a").href;
 
         if (card.classList.contains("selected")) {
-            window.open(link, "_blank"); // 第二次點 → 開新分頁
+            // 若特定卡牌具有翻轉屬性
+            if (card.dataset.flip === "true") {
+                card.classList.toggle("flip"); // 翻轉特定卡牌
+            } else {
+                window.open(link, "_blank"); // 一般卡牌直接開新頁
+            }
         } else {
-            allCards.forEach(c => c.classList.remove("selected"));
-            card.classList.add("selected"); // 第一次點 → 選中
+            allCards.forEach(c => {
+                c.classList.remove("selected");
+                c.classList.remove("flip");
+            });
+            card.classList.add("selected");
         }
         
         e.stopPropagation(); // 防止冒泡影響整頁點擊事件
     } else {
-        allCards.forEach(c => c.classList.remove("selected")); // 點空白區取消所有選中
+        allCards.forEach(c => {
+            c.classList.remove("selected");
+            c.classList.remove("flip");
+        });
     }
 });
 
