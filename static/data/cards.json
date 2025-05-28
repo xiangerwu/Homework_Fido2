@@ -2,7 +2,7 @@
     "0": [
         {
             "src": "/static/images/card0.jpg",
-            "link": "/pdp/login_decision",
+            "link": "/en/1/",
             "tooltip": "你還沒準備好",
             "scale": 1.5,
             "flip": true

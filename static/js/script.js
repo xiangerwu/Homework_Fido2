@@ -1,115 +1,175 @@
 // --- 模組初始化區塊 ---
-let domReady = false;        // HTML 是否載入完成
-let bgReady = false;         // 背景圖片是否載入完成
-let bgLoaded = false;       // 背景圖片是否載入完成
-let jsonReady = false;       // 卡片資料是否載入完成
-let cardData = [];           // 儲存卡片資料陣列
+let domReady = false;
+let bgReady = false;
+let bgLoaded = false;
+let jsonReady = false;
+let cardData = [];
 
-
-// 嘗試執行卡片繪製（須三者皆完成）
 function tryRender() {
-    if (domReady && bgReady && jsonReady&& bgLoaded) {
+    if (domReady && bgReady && jsonReady && bgLoaded) {
         renderCards(cardData);
     }
 }
 
-// --- 核心函式：渲染卡片區 ---
 function renderCards(cards) {
     const hand = document.getElementById("hand");
     const tooltip = document.getElementById("tooltip");
-    const radius = 300;          // 控制卡片與中心點距離
-    const angleStep = 20;        // 每張卡片的角度間隔
+    const radius = 300;
+    const angleStep = 20;
 
     cards.forEach((card, i) => {
-        // 計算卡片角度（中間為 0）
         const angle = -angleStep * (cards.length - 1) / 2 + i * angleStep;
 
-        // 包裹層：定位與管理
         const wrapper = document.createElement("div");
         wrapper.className = "card-wrapper";
 
-        // 超連結容器（包含提示與開新頁）
-        const a = document.createElement("a");
-        a.href = card.link;
-        a.dataset.tooltip = card.tooltip;
-
-        // 卡片主體：加入旋轉與 Y 位移
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
+        cardDiv.dataset.flip = card.flip ? "true" : "false";
         cardDiv.style.transform = `rotate(${angle}deg) translateY(-${radius}px) scale(${card.scale || 1})`;
-        // 加入內部結構
+
         const cardInner = document.createElement("div");
         cardInner.className = "card-inner";
 
         const frontDiv = document.createElement("div");
         frontDiv.className = "card-front";
-  
-        // 卡片圖片
+
+        const a = document.createElement("a");
+        a.href = card.link;
+        a.dataset.tooltip = card.tooltip;
+
         const img = document.createElement("img");
         img.src = card.src;
         img.alt = `card${i + 1}`;
 
-        // 組合結構
-        cardDiv.appendChild(img);
-        a.appendChild(cardDiv);
-        wrapper.appendChild(a);
-        hand.appendChild(wrapper);
-        frontDiv.appendChild(img);
+        a.appendChild(img);
+        frontDiv.appendChild(a);
+
+        const backDiv = createCardBack(i);
+        backDiv.classList.add("card-back");
+
         cardInner.appendChild(frontDiv);
-        // 特定卡片加入翻轉標示
-        if (card.flip) {
-            cardDiv.dataset.flip = "true";
-            const backDiv = document.createElement("div");
-            backDiv.className = "card-back";
+        if (card.flip) cardInner.appendChild(backDiv);
 
-            const input = document.createElement("input");
-            input.type = "text";
-            input.placeholder = "輸入用戶名稱";
-            input.id = `username_${i}`;
+        cardDiv.appendChild(cardInner);
+        wrapper.appendChild(cardDiv);
+        hand.appendChild(wrapper);
 
-            const buttonsDiv = document.createElement("div");
-            buttonsDiv.className = "buttons";
+        setTooltipEvents(a, tooltip);
 
-            const registerBtn = document.createElement("a");
-            registerBtn.href = "/register";
-            registerBtn.textContent = "註冊";
-            registerBtn.className = "button register-btn";
+        cardDiv.addEventListener("click", (e) => {
+            const target = e.target;
+            if (target.tagName === "INPUT" || target.tagName === "BUTTON") return;
+            e.preventDefault();
+            e.stopPropagation();
 
-            const loginBtn = document.createElement("a");
-            loginBtn.href = "/login";
-            loginBtn.textContent = "登入";
-            loginBtn.className = "button login-btn";
+            const allCards = document.querySelectorAll(".card");
+            const allBackContents = document.querySelectorAll(".card-back-content");
 
-            buttonsDiv.appendChild(registerBtn);
-            buttonsDiv.appendChild(loginBtn);
+            if (cardDiv.classList.contains("selected")) {
+                if (cardDiv.dataset.flip === "true") {
+                    const inner = cardDiv.querySelector(".card-inner");
+                    if (inner) inner.classList.toggle("flip");
+                    const content = cardDiv.querySelector(".card-back-content");
+                    if (content) content.style.display = "flex";
+                } else {
+                    const link = cardDiv.querySelector("a");
+                    if (link && link.href) {
+                        window.open(link.href, "_blank");
+                    }
+                }
+            } else {
+                allCards.forEach(c => {
+                    c.classList.remove("selected");
+                    const innerC = c.querySelector(".card-inner");
+                    if (innerC) innerC.classList.remove("flip");
+                });
+                allBackContents.forEach(c => c.style.display = "none");
 
-            backDiv.appendChild(input);
-            backDiv.appendChild(buttonsDiv);
-
-            cardInner.appendChild(backDiv);
-        }
-        // tooltip 行為設定
-        a.addEventListener("mouseenter", () => {
-            tooltip.textContent = a.dataset.tooltip;
-            tooltip.style.display = "block";
-        });
-        a.addEventListener("mousemove", e => {
-            tooltip.style.left = e.pageX + 15 + "px";
-            tooltip.style.top = e.pageY - 30 + "px";
-        });
-        a.addEventListener("mouseleave", () => {
-            tooltip.style.display = "none";
+                cardDiv.classList.add("selected");
+            }
         });
     });
 }
 
-// --- DOM 載入監聽 ---
+function createCardBack(i) {
+    const backDiv = document.createElement("div");
+    backDiv.className = "card-back";
+
+    const backContent = document.createElement("div");
+    backContent.className = "card-back-content";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "輸入用戶名稱";
+    input.id = `username_${i}`;
+
+    const buttonsDiv = document.createElement("div");
+    buttonsDiv.className = "buttons";
+    buttonsDiv.appendChild(createButton(null, "註冊", "register-btn", "handleRegister"));
+    buttonsDiv.appendChild(createButton(null, "登入", "login-btn", "handleLogin"));
+
+    backContent.appendChild(input);
+    backContent.appendChild(buttonsDiv);
+    backDiv.appendChild(backContent);
+
+    return backDiv;
+}
+
+function createButton(href, text, className, onClickFnName = null) {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.className = `button ${className}`;
+
+    btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (onClickFnName && typeof window[onClickFnName] === 'function') {
+            window[onClickFnName](e);
+        } else if (href) {
+            window.location.href = href;
+        }
+    });
+
+    return btn;
+}
+
+function setTooltipEvents(element, tooltip) {
+    element.addEventListener("mouseenter", () => {
+        tooltip.textContent = element.dataset.tooltip;
+        tooltip.style.display = "block";
+    });
+    element.addEventListener("mousemove", e => {
+        tooltip.style.left = `${e.pageX + 15}px`;
+        tooltip.style.top = `${e.pageY - 30}px`;
+    });
+    element.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     domReady = true;
     tryRender();
 });
 
-// // --- 背景圖片監聽 ---
+document.addEventListener("click", (e) => {
+    const isCard = e.target.closest(".card");
+    const isBackContent = e.target.closest(".card-back-content");
+    const allCards = document.querySelectorAll(".card");
+    const allBackContents = document.querySelectorAll(".card-back-content");
+
+    if (!isCard && !isBackContent) {
+        allCards.forEach(c => {
+            c.classList.remove("selected");
+            const innerC = c.querySelector(".card-inner");
+            if (innerC) innerC.classList.remove("flip");
+        });
+        allBackContents.forEach(c => c.style.display = "none");
+    }
+});
+
 const bg = document.querySelector(".background");
 if (bg.complete) {
     bgReady = true;
@@ -120,64 +180,7 @@ if (bg.complete) {
     };
 }
 
-// --- 點擊邏輯：卡片點擊與取消邏輯 ---
-document.addEventListener("click", (e) => {
-    const isCard = e.target.closest(".card");
-    const allCards = document.querySelectorAll(".card");
-
-    if (isCard) {
-        e.preventDefault(); // 阻止 a 元素預設跳轉
-
-        const card = isCard;
-        const link = card.closest("a").href;
-
-        if (card.classList.contains("selected")) {
-            // 若特定卡牌具有翻轉屬性
-            if (card.dataset.flip === "true") {
-                card.classList.toggle("flip"); // 翻轉特定卡牌
-            } else {
-                window.open(link, "_blank"); // 一般卡牌直接開新頁
-            }
-        } else {
-            allCards.forEach(c => {
-                c.classList.remove("selected");
-                c.classList.remove("flip");
-            });
-            card.classList.add("selected");
-        }
-        
-        e.stopPropagation(); // 防止冒泡影響整頁點擊事件
-    } else {
-        allCards.forEach(c => {
-            c.classList.remove("selected");
-            c.classList.remove("flip");
-        });
-    }
-});
-
-// --- 載入卡片資料 ---
-fetch("static/data/cards.json")
-    .then(res => res.json())
-    .then(cardGroups => {
-        if (LOGIN_LEVEL === 0) {
-            // 僅顯示等級 0（訪客卡）
-            if (cardGroups[0]) {
-                cardData.push(...cardGroups[0]);
-            }
-        } else {
-            // 顯示 1 ~ LOGIN_LEVEL 的所有等級卡
-            for (let level = 1; level <= LOGIN_LEVEL; level++) {
-                if (cardGroups[level]) {
-                    cardData.push(...cardGroups[level]);
-                }
-            }
-        }
-        jsonReady = true;
-        tryRender();
-    });
-
 const mainBg = document.querySelector('.main-bg');
-
 if (mainBg.complete) {
     mainBg.style.opacity = 1;
     bgLoaded = true;
@@ -188,9 +191,88 @@ if (mainBg.complete) {
         bgLoaded = true;
         tryRender();
     };
-    }
+}
 
 if (!sessionStorage.getItem("reloaded")) {
     sessionStorage.setItem("reloaded", "yes");
     window.location.reload();
-      }
+}
+
+fetch("static/data/cards.json")
+    .then(res => res.json())
+    .then(cardGroups => {
+        if (LOGIN_LEVEL === 0) {
+            if (cardGroups[0]) {
+                cardData.push(...cardGroups[0]);
+            }
+        } else {
+            for (let level = 1; level <= LOGIN_LEVEL; level++) {
+                if (cardGroups[level]) {
+                    cardData.push(...cardGroups[level]);
+                }
+            }
+        }
+        jsonReady = true;
+        tryRender();
+    });
+
+function handleRegister(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const username = getUsernameFromEvent(event);
+    if (!username) return alert("請先輸入用戶名稱");
+
+    fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+    })
+        .then(async res => {
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert("✅ 註冊成功：" + data.message);
+            } else {
+                alert("❌ 註冊失敗：" + (data.message || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            alert("❌ 註冊請求錯誤：" + err.message);
+        });
+}
+
+function handleLogin(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const username = getUsernameFromEvent(event);
+    if (!username) return alert("請先輸入用戶名稱");
+
+    fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+    })
+        .then(async res => {
+            const data = await res.json();
+            if (res.ok && data.status === "OK" && data.token) {
+                document.cookie = `pdp_token=${data.token}; path=/; max-age=3600;`;
+                alert("✅ 登入成功，頁面將重新載入");
+                window.location.reload();
+            } else {
+                alert("❌ 登入失敗：" + (data.message || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            alert("❌ 登入請求錯誤：" + err.message);
+        });
+}
+
+function getUsernameFromEvent(event) {
+    const card = event.target.closest(".card");
+    if (!card) return null;
+    const input = card.querySelector("input[type='text']");
+    return input ? input.value.trim() : null;
+}
+
+window.handleRegister = handleRegister;
+window.handleLogin = handleLogin;
+window.getUsernameFromEvent = getUsernameFromEvent;

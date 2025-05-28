@@ -61,6 +61,40 @@ def home():
 
     return render_template("index.html", username=username, login_level=login_level)
 
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    username = data.get("username")
+
+    if not username:
+        return jsonify(success=False, message="請提供用戶名稱"), 400
+
+    if username == "admin":  # 假設 admin 已存在
+        return jsonify(success=False, message="該用戶名稱無法使用"), 409
+
+    # 假裝新增成功
+    return jsonify(success=True, message=f"{username} 註冊成功"), 200
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    username = data.get("username")
+
+    if not username:
+        return jsonify(status="Fail", message="請提供用戶名稱"), 400
+
+    if username != "validuser":  # 模擬一個假驗證
+        return jsonify(status="Fail", message="帳號不存在或無效"), 401
+
+
+    token = "123456789abcdef"
+
+    return jsonify(status="OK", token=token)
+
+
 # 主要測試頁面
 # 反代理路由
 # application = DispatcherMiddleware(Flask("dummy"), {

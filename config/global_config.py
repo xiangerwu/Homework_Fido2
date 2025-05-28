@@ -30,7 +30,7 @@ ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
 
 SOURCE_KEY_URLS = {
-    "fido2": "https://proxy.akitawan.moe/wu/fido2/oauth2/jwks.json",  # FIDO2 的 JWKS URL
+    "fido2": "192.168.50.222:5000/oauth2/jwks.json",  # FIDO2 的 JWKS URL
 }
 
 """ General Functions """
