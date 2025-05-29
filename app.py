@@ -31,26 +31,122 @@ app.secret_key = g_secret_key
 - /login_decision: 用於處理登入決策的路由
 """
 
+# 將來源確認邏輯抽出成共用函式
+def verify_source():
+    allowed_sources = ["akitawan.moe"]  # 可根據實際需求調整
+    source_ip = request.remote_addr
+    print(f"🔍 來源 IP: {source_ip}")
+    return True  # 暫時允許所有來源，後續可強化檢查
+
 
 # 登入決策
-@app.route("/")
-@app.route("/login_decision")
-@attach_jwt_if_available_only_sign
-def decision():
-    print("進入登入決策頁面")
-    payload = request.jwt_payload  # 裝飾器已經驗簽好
+# 除非有路由不然一律404
+@app.route("/", methods=["GET", "POST"])
+def index():
+    # 404 Not Found
+    return render_template("index.html")
 
-    if payload:
-        print("JWT Token 驗簽成功:", payload)
-        resp = make_response(render_template("post_login_close.html", redirect_url="https://proxy.akitawan.moe"))
-        # 如您仍需重新簽發 JWT，可在這裡執行
-        token = request.cookies.get("token")  # 可選：取得原 token 用來寫回
-        if token:
-            resp.set_cookie("token", token, httponly=True, secure=True)
-        return resp
-    else:
-        print("未檢測到 token 或驗簽失敗，顯示登入頁面")
-        return render_template("popup_redirect.html")
+""" 註冊路由-開始 """
+@app.route("/register-begin", methods=["POST"])
+def register_begin():
+    if not verify_source():
+        return jsonify({"error": "來源不被允許"}), 403
+
+    data = request.get_json()
+    username = data.get("username")
+    if not username:
+        return jsonify({"error": "缺少用戶名稱"}), 400
+
+    try:
+        res = requests.post(
+            PIPS["Fido2"]+"register-begin",
+            json={"username": username},
+            timeout=10,
+            verify=False  # 使用 FIDO2 的公鑰憑證
+        )
+        return jsonify(res.json()), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": f"連接 FIDO2 伺服器失敗：{str(e)}"}), 503
+    
+
+
+""" 註冊路由-結束 """
+@app.route("/register-end", methods=["POST"])
+def register_end():
+    if not verify_source():
+        return jsonify({"error": "來源不被允許"}), 403
+
+    data = request.get_json()
+    try:
+        res = requests.post(
+            PIPS["Fido2"]+"register-end",
+            json=data,
+            timeout=10,
+            verify="server_key/server.crt"  # 使用 FIDO2 的公鑰憑證
+        )
+        return jsonify(res.json()), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": f"連接 FIDO2 伺服器失敗：{str(e)}"}), 503
+    
+""" 登入路由-開始 """
+@app.route("/login-begin", methods=["POST"])
+def login_begin():
+    if not verify_source():
+        return jsonify({"error": "來源不被允許"}), 403
+
+    data = request.get_json()
+    username = data.get("username")
+    if not username:
+        return jsonify({"error": "缺少用戶名稱"}), 400
+
+    try:
+        res = requests.post(
+            PIPS["Fido2"]+"login-begin",
+            json={"username": username},
+            timeout=10,
+            verify="server_key/server.crt"  # 使用 FIDO2 的公鑰憑證
+        )
+        return jsonify(res.json()), res.status_code
+    except requests.RequestException as e:
+        return jsonify({"error": f"連接 FIDO2 伺服器失敗：{str(e)}"}), 503
+
+""" 登入路由-結束 """
+@app.route("/login-end", methods=["POST"])
+def login_end():
+    if not verify_source():
+        return jsonify({"error": "來源不被允許"}), 403
+
+    data = request.get_json()
+    username = data.get("username")
+    credential = data.get("credential")
+
+    if not username or not credential:
+        return jsonify({"error": "請提供用戶名稱與憑證資料"}), 400
+
+    try:
+        res = requests.post(
+            PIPS["Fido2"]+"login-end",
+            json={
+                "username": username,
+                "credential": credential,
+                "source": "card.example.com",
+                "dist": "fido2.example.com"
+            },
+            timeout=10,
+            verify="server_key/server.crt"  # 使用 FIDO2 的公鑰憑證
+        )
+        if res.status_code == 200:
+            result = res.json()
+            token = result.get("token")
+            if token:
+                resp = make_response(jsonify(result), 200)
+                resp.set_cookie("fido2_token", token, max_age=3600, httponly=True)
+                return resp
+            return jsonify(result), 200
+        else:
+            return jsonify({"error": "FIDO2 伺服器驗證失敗", "details": res.text}), 502
+    except requests.RequestException as e:
+        return jsonify({"error": f"登入過程連線 FIDO2 失敗：{str(e)}"}), 503
 
 
 
@@ -79,4 +175,6 @@ application = app
 if __name__ == "__main__":
     # app.run(host=g_IP, port=g_port, debug=True, ssl_context=(g_SSL_crt, g_SSL_key))
     app.run(host=g_IP, port=g_port, debug=True)
+
+
 
