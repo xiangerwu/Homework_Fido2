@@ -28,8 +28,10 @@ g_port = 1919  # 預設 Flask 埠號
 RP_ID = "akitawan.moe"  # Fido2 用到
 ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
-token_name = "token"  # 用於存儲 JWT 的 cookie 名稱
-
+PIPS = {
+    "Fido2": "https://192.168.50.222:5000/",
+    "OAuth": "https://oauth.akitawan.moe/",
+}
 # 來源與 JWKS URL 對照表
 SOURCE_KEY_URLS = {
     "akitawan.moe": "server_key/server.crt",
@@ -200,37 +202,39 @@ def generate_jwt(
 # 作用: 驗證 JWT Token 的簽名，並解密 payload
 # 參數: JWT Token 字串
 # 回傳: payload 字典，或 None 以及錯誤訊息
-def decode_jwt(jwt_str: str, verify: int = 1) -> tuple:
+def decode_jwt(jwt_str: str) -> tuple:
     try:
         with open("server_key/server.crt", "rb") as f:
             public_key = jwk.JWK.from_pem(f.read())
         # Step 3: 解密 payload（使用 A 自己的私鑰）
-        with open("server_key/server.key", "rb") as f:
-            private_key = jwk.JWK.from_pem(f.read())
+        # with open("server_key/server.key", "rb") as f:
+            # private_key = jwk.JWK.from_pem(f.read())
 
         # Step 1: 驗章（用 A 的公鑰）
         print("驗簽 JWT ")
         token = jwt.JWT(jwt=jwt_str, key=public_key)
         # Step 2: 從 token.claims 中讀出 JWE 字串（加密的 payload）
-        print("📦 取得加密的 JWE Payload")
-        encrypted_jwe_str = token.claims
-        jwe_token = jwe.JWE()
-        if verify:
-            print("解密 payload")
-            jwe_token.deserialize(encrypted_jwe_str, key=private_key)
+        # print("📦 取得加密的 JWE Payload")
+        # encrypted_jwe_str = token.claims
+        # jwe_token = jwe.JWE()
+        print("📦 取得 payload（明文）")
+        raw_payload = token.claims
+        if not raw_payload:
+            raise ValueError("❌ JWT claims 為空，無法解析")
 
-            # Step 4: 解析 payload 為 JSON
-            payload = json.loads(jwe_token.payload.decode("utf-8"))
-            print("✅ 解密完成，Payload:", payload)
+        try:
+            payload = json.loads(token.claims)  # ✅ 直接解析明文 JSON payload
+        except json.JSONDecodeError as e:
+            raise ValueError(f"❌ 無法解析 payload：{e}")
+        # jwe_token.deserialize(encrypted_jwe_str)
+        # Step 4: 解析 payload 為 JSON
+        print("login 不用解密 payload")
+        # payload = json.loads(jwe_token.payload.decode("utf-8"))
+        print("Payload:", payload)
 
-            # Step 5: 驗證發行者
-            if payload.get("iss") != ORIGIN:
-                raise ValueError("無效的發行者")
-        else:
-            print("不解密 payload")
-            payload = "未解密的 payload，可簽發 JWT"
-            print("✅ Payload:", payload)
-
+        # Step 5: 驗證發行者
+        if payload.get("iss") != ORIGIN:
+            raise ValueError("無效的發行者")
         # 回傳 payload
         return payload, None
 
@@ -254,12 +258,12 @@ def attach_jwt_if_available(f):
     def wrapper(*args, **kwargs): 
         # 從請求的 cookies 中獲取 JWT Token        
         print("開始檢查TOKEN")
-        token = request.cookies.get("token")
+        token = request.cookies.get("fido2_token")
         # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
         # 如果 token 存在但無效，payload 會是 None
         # 如果 token 存在且有效，payload 會是字典
-        payload ,jwt_error= decode_jwt(token,1) if token else (None,None) 
+        payload ,jwt_error= decode_jwt(token) if token else (None,None) 
         
         # 若有合法 JWT 就會變成 dict，否則是 None
         request.jwt_payload = payload 
@@ -272,30 +276,3 @@ def attach_jwt_if_available(f):
         return f(*args, **kwargs)
     return wrapper    
 
-# 函數：檢查 JWT Token 是否存在(僅驗證，不解密 payload)
-def attach_jwt_if_available_only_sign(f):
-    @wraps(f) # 確保原始函數的元資料不會被覆蓋
-    # @wraps(f) 是一個裝飾器，用來保留原始函數的元資料
-    # (例如函數名稱、文檔字串等)，這樣在調試或使用函數時，可以獲得正確的資訊。
-    # 當你使用裝飾器來包裝一個函數時，
-    # 原始函數的名稱、文檔字串等資訊不會被改變。
-    def wrapper(*args, **kwargs): 
-        # 從請求的 cookies 中獲取 JWT Token        
-        print("開始驗簽TOKEN")
-        token = request.cookies.get("token")
-        # 嘗試解碼 JWT Token
-        # 如果 token 不存在，payload 會是 None
-        # 如果 token 存在但無效，payload 會是 None
-        # 如果 token 存在且有效，payload 會是字典
-        payload ,jwt_error= decode_jwt(token,0) if token else (None,None) 
-        
-        # 若有合法 JWT 就會變成 dict，否則是 None
-        request.jwt_payload = payload 
-        # 如果有錯誤，則會是錯誤訊息
-        request.jwt_error = jwt_error 
-        if payload:
-            print("JWT Token 有效",payload)
-        if jwt_error:
-            print("JWT Token 無效",jwt_error)
-        return f(*args, **kwargs)
-    return wrapper    
