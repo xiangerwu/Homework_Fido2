@@ -5,6 +5,8 @@ let bgLoaded = false;
 let jsonReady = false;
 let cardData = [];
 
+window.base_path = window.location.origin; // 移除尾端斜線
+
 function tryRender() {
     if (domReady && bgReady && jsonReady && bgLoaded) {
         renderCards(cardData);

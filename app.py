@@ -75,9 +75,10 @@ def register_begin():
     try:
         # ✅ 發送 POST 請求給外部 API
         response = requests.post(
-            "https://127.0.0.1:1919/pdp/register-begin",  # <== 替換成目標 API 的 URL
+            "https://127.0.0.1:1919/register-begin",  # <== 替換成目標 API 的 URL
             json={"username": username},
-            timeout=60
+            timeout=60,
+            verify="server_key/server.crt"
         )
 
         try:
@@ -115,12 +116,13 @@ def register_end():
     try:
         # ✅ 發送 POST 請求給 PDP 的 /register-end API
         response = requests.post(
-            "https://127.0.0.1:1919/pdp/register-end",  # 替換為 PDP 的真實網址
+            "https://127.0.0.1:1919/register-end",  # 替換為 PDP 的真實網址
             json={
                 "username": username,
                 "credential": credential
             },
-            timeout=60
+            timeout=60,
+            verify="server_key/server.crt"
         )
 
         # ✅ 處理 PDP 的回傳
@@ -147,9 +149,10 @@ def login_begin():
     try:
         # ✅ 將使用者資訊傳遞給 PDP
         response = requests.post(
-            "https://127.0.0.1:1919/pdp/login-begin",  # <== 改成你的 PDP API
+            "https://127.0.0.1:1919/login-begin",  # <== 改成你的 PDP API
             json={"username": username},
-            timeout=60
+            timeout=60,
+            verify="server_key/server.crt"
         )
 
         if response.status_code == 200:
@@ -173,14 +176,15 @@ def login_end():
     try:
         # ✅ 傳送憑證資料至 PDP 做驗證
         response = requests.post(
-            "https://127.0.0.1:1919/pdp/login-end",  # <== 改成 PDP API
+            "https://127.0.0.1:1919/login-end",  # <== 改成 PDP API
             json={
                 "username": username,
                 "credential": credential,
                 "source": "akitawan.moe",
                 "dist": "akitawan.moe"
             },
-            timeout=60
+            timeout=60,
+            verify="server_key/server.crt"
         )
 
         if response.status_code == 200:
