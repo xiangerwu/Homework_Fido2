@@ -231,7 +231,7 @@ def verify_credential():
         if auth_result:
             # 從網址中解析是否來自其他網站
             from_oauth = "from_oauth" in request.args
-            debug_log.append("generate_jwt")
+            debug_log.append("generate_fido2_jwt")
             #             
             resolved_source = extra_source  or ORIGIN # or 會自動選擇第一個非空值    
             resolved_dist   = extra_dist    or RP_ID
@@ -247,7 +247,6 @@ def verify_credential():
             response = jsonify({
                 "status": "ok",
                 "message": "成功認證",
-                "signCount": sign_count,
                 "token": JWT_Token 
             })
             # 回傳
