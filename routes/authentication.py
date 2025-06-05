@@ -57,9 +57,9 @@ auth_bp = Blueprint("auth", __name__)
 
 """ Auth Functions """
 
-# 網頁路徑 /verify-register
+# 網頁路徑 /verify-username
 # 作用: 驗證 WebAuthn 註冊資料
-@auth_bp.route("", methods=["POST"], strict_slashes=False)
+@auth_bp.route("/verify-username", methods=["POST"], strict_slashes=False)
 def verify_register():
     # 取得用戶提交的 JSON 數據，並檢查用戶名稱
     print("authentication - verify_register")
@@ -235,16 +235,22 @@ def verify_credential():
             #             
             resolved_source = extra_source  or ORIGIN # or 會自動選擇第一個非空值    
             resolved_dist   = extra_dist    or RP_ID
-            # 
-            response = generate_jwt_response(
+            # 產生 未加密的 JWT 用於確認驗證成功
+            JWT_Token = generate_fido2_jwt_response(
                 username=username,
                 aaguid=attested_data.aaguid.hex(),
                 sign_count=parsed_auth_data.counter,
                 source=resolved_source,
-                destination=resolved_dist,
-                from_oauth=from_oauth
+                destination=resolved_dist
             )
-
+            # 建立回傳格式（含 token）
+            response = jsonify({
+                "status": "ok",
+                "message": "成功認證",
+                "signCount": sign_count,
+                "token": JWT_Token 
+            })
+            # 回傳
             return response
         else:
             return jsonify({"error": "登入驗證失敗"}), 400
@@ -386,3 +392,29 @@ def generate_jwt_response(
     )
 
     return response
+
+
+def generate_fido2_jwt_response(
+    username: str,
+    aaguid: str,
+    sign_count: int,
+    source: str,
+    destination: str,
+):
+    """
+    建立純 JSON JWT 回應，給非 OAuth 流程的 FIDO2 驗證使用。
+
+    回傳:
+        Flask Response: JSON 格式回傳 JWT
+    """
+
+    # 產生 JWT（照原本的 generate_jwt 函式）
+    jwt_token = generate_jwt(
+        username=username,
+        aaguid=aaguid,
+        sign_count=sign_count,
+        source=source,
+        destination=destination,
+        role="user"
+    )
+    return jwt_token

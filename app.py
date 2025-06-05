@@ -35,7 +35,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app,  x_for=1, x_proto=1,x_host=1,x_prefix=1)
 # 設定 CORS 跨域請求
 CORS(app, origins=ORIGIN, supports_credentials=True)
 # 設定 SSL
-sslify = SSLify(app)
+# sslify = SSLify(app)
 
 # 設定 secret_key
 app.secret_key = g_secret_key
