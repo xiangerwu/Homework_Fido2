@@ -1,0 +1,39 @@
+{
+    "1": [
+       
+        {
+            "name": "WuOAuth",
+            "link": "/wu/oauth/"
+           
+        },
+        {
+            "name": "EnWeb1",
+            "link": "/en/1/"
+            
+        },
+        {
+            "name": "EnWeb2",
+            "link": "/en/2/"
+            
+        }
+    ],
+    "2":[
+        {
+            "name": "ldap-admin",
+            "link": "/ldap-admin"
+            
+        },
+        {
+            "name": "Fido2JWKS",
+            "link": "/Fido2/oauth2/jwks.json"
+           
+        }
+    ],
+    "3":[
+        {
+            "name":"Rick",
+            "link": "/rick-roll"
+        }
+
+    ]
+}

@@ -1,9 +1,11 @@
 import base64
 import os
 import html, re
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from functools import wraps
-from flask import request
+from flask import request, jsonify, make_response, render_template
+from flask import Flask, redirect, url_for, session, flash
 import requests
 import json
 from cryptography import x509
@@ -13,7 +15,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from base64 import urlsafe_b64encode,urlsafe_b64decode
 from jwcrypto import jwk,jwe,jws,jwt
 from jwcrypto.common import JWException
-
+from config.ldap_manager import  LDAP_ManagerControl
 """ Global Variables """
 
 
@@ -28,8 +30,9 @@ g_port = 1919  # 預設 Flask 埠號
 RP_ID = "akitawan.moe"  # Fido2 用到
 ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
+# PIP 端點
 PIPS = {
-    "Fido2": "https://192.168.50.222:5000/",
+    "Fido2": "https://private.inside:8964/Fido2/",
     "OAuth": "https://oauth.akitawan.moe/",
 }
 # 來源與 JWKS URL 對照表
@@ -40,7 +43,26 @@ SOURCE_KEY_URLS = {
     "akitawan.moe/en/":"https://proxy.akitawan.moe/en/1/jwks.json",
     # 可擴充更多來源
 }
+
+# 預載 permission 對照表
+PERMISSION_FILE = Path("config/permission.json")
+
+
 """ General Functions """
+
+#  函式：記錄訊息
+def log(*args):
+    now = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    print(now, *args)
+
+# 函式名稱：載入權限表
+def load_permissions():
+    try:
+        with PERMISSION_FILE.open(encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        log(f"[權限載入失敗] {e}")
+        return {}
 
 # 函式名稱: encode_bytes_to_base64
 # 作用: 遞歸將 bytes 類型轉換為 Base64 字串，確保 JSON 序列化
@@ -77,20 +99,20 @@ def base64url_uint(val: int) -> str:
     b64 = base64.urlsafe_b64encode(byte_array).rstrip(b"=")  # URL-safe + 無填充
     return b64.decode("utf-8")
 
-# 函數：將 username 轉換為 HTML 實體編碼
+# 函式：將 username 轉換為 HTML 實體編碼
 def sanitize_username(username):
     return html.escape(username)
 
-# 函數：將 HTML 實體編碼轉換回正常字符
+# 函式：將 HTML 實體編碼轉換回正常字符
 def unsanitize_username(safe_username):
     return html.unescape(safe_username)
 
-# 函數: 取得對應來源的公鑰
+# 函式: 取得對應來源的公鑰
 # 作用: 取得來源的 JWKS URL，並從中獲取公鑰
 def load_public_key_by_source(source: str) -> jwk.JWK:
     # 檢查來源是否在對照表中
     url_or_path = SOURCE_KEY_URLS[source]
-    print(f"取得來源 {source} 的公鑰: {url_or_path}")
+    log(f"取得來源 {source} 的公鑰: {url_or_path}")
     # 如果來源是 URL，則從 URL 下載公鑰
     if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
         res = requests.get(url_or_path)
@@ -98,7 +120,7 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
         return jwk.JWK(**res.json()["keys"][0])
     # 如果來源是本地檔案，則從檔案讀取公鑰
     else:
-        print(f"從本地檔案讀取公鑰: {url_or_path}")
+        log(f"從本地檔案讀取公鑰: {url_or_path}")
         with open(url_or_path, "rb") as f: 
             return jwk.JWK.from_pem(f.read())
 
@@ -128,77 +150,60 @@ def encrypt_payload_with_jwe(payload: dict, recipient_key: jwk.JWK) -> str:
     # 回傳 Compact 格式（str）
     return jwetoken.serialize(compact=True)
 
-# 函數：產生 JWT Token
-def generate_jwt(
-    username: str,
-    aaguid: str = None,
-    sign_count: int = None,
-    source: str = None,
-    destination: str = None,
-    role: str = "user",
-) -> str:
-    """
-    產生 JWT Token
-
-    參數:
-        username (str): 使用者識別 ID
-        aaguid (str): FIDO2 裝置的識別碼（可選）
-        sign_count (int): FIDO2 裝置的簽名計數器（可選）
-        role (str): 使用者權限（預設為 'user'）
-        "source"：來源網站
-        "destination"：目的地網站
-
-    回傳:
-        str: JWT 字串（已簽章）
-    """
-    # 取得當前時間
+# 函式：生成 JWT Token
+def generate_jwt(payload: dict, login_level: int) -> str:
+    # 確保 payload 中有必要的欄位
     now = datetime.now(timezone.utc)
     exp = now + timedelta(minutes=10)
+    username = payload.get("sub")
+    source = payload.get("src")
+    destination = payload.get("aud")
+    role = payload.get("role", "user")  
+    aaguid = payload.get("aaguid")
+    sign_count = payload.get("signCount", 0)
 
-    # 產生 JWT  的 payload  
-    print("包裝 payload")
+    if not username:
+        raise ValueError("JWT payload 中缺少 sub 欄位")
+
+    # 組合 payload
     payload = {
         "sub": username,
-        "role": role,
-        "iat": int(now.timestamp()),  # 簽發時間
-        "exp": int(exp.timestamp()),  # 到期時間
         "src": source,  # 來源網站
         "aud": destination,  # 目的地網站
+        "role": role,        
+        "iat": int(now.timestamp()),  # 簽發時間
+        "exp": int(exp.timestamp()),  # 到期時間
         "iss": ORIGIN,  # 發行者
+        "login_level": login_level, # 登入等級
     }
+
     # 如果有提供 aaguid 和 sign_count，則加入 payload
     if aaguid:
         payload["aaguid"] = aaguid
-    if sign_count is not None:
+    if sign_count:
         payload["signCount"] = sign_count
 
-    """
-    將 payload 加密
-    """
-    # 是否加密 payload 取決於 source 是否在對照表中
+    # 加密 payload（視來源）
     if source in SOURCE_KEY_URLS:
-        print(">> 將   payload 加密")
+        log(">> 將 payload 加密")
         recipient_key = load_public_key_by_source(source)
-        claims = encrypt_payload_with_jwe(payload,recipient_key)
+        claims = encrypt_payload_with_jwe(payload, recipient_key)
     else:
-        print(">> 不將 payload 加密")
-        claims = payload  # 不加密
-   
-    """
-    用私鑰簽名 JWT Token
-    """
-    # 讀取 server_key/server.key
-    print("讀取私鑰 A")
+        log(">> 不將 payload 加密")
+        claims = payload
+
+    # 簽章
+    log("讀取私鑰 A")
     with open("server_key/server.key", "rb") as f:
         private_key = jwk.JWK.from_pem(f.read())
-    # 用私鑰簽名 JWT
-    print("用私鑰 A 簽章")
+    log("用私鑰 A 簽章")
     token = jwt.JWT(header={"alg": "RS256", "kid": "A1"}, claims=claims)
     token.make_signed_token(private_key)
-    jwt_str = token.serialize(compact=True)
-    return jwt_str
 
-# 函數：解碼 JWT Token
+    return token.serialize(compact=True)
+
+
+# 函式：解碼 JWT Token
 # 作用: 驗證 JWT Token 的簽名，並解密 payload
 # 參數: JWT Token 字串
 # 回傳: payload 字典，或 None 以及錯誤訊息
@@ -211,13 +216,13 @@ def decode_jwt(jwt_str: str) -> tuple:
             # private_key = jwk.JWK.from_pem(f.read())
 
         # Step 1: 驗章（用 A 的公鑰）
-        print("驗簽 JWT ")
+        log("驗簽 JWT ")
         token = jwt.JWT(jwt=jwt_str, key=public_key)
         # Step 2: 從 token.claims 中讀出 JWE 字串（加密的 payload）
-        # print("📦 取得加密的 JWE Payload")
+        # log("📦 取得加密的 JWE Payload")
         # encrypted_jwe_str = token.claims
         # jwe_token = jwe.JWE()
-        print("📦 取得 payload（明文）")
+        log("📦 取得 payload（明文）")
         raw_payload = token.claims
         if not raw_payload:
             raise ValueError("❌ JWT claims 為空，無法解析")
@@ -228,9 +233,9 @@ def decode_jwt(jwt_str: str) -> tuple:
             raise ValueError(f"❌ 無法解析 payload：{e}")
         # jwe_token.deserialize(encrypted_jwe_str)
         # Step 4: 解析 payload 為 JSON
-        print("login 不用解密 payload")
+        log("login 不用解密 payload")
         # payload = json.loads(jwe_token.payload.decode("utf-8"))
-        print("Payload:", payload)
+        log("Payload:", payload)
 
         # Step 5: 驗證發行者
         if payload.get("iss") != ORIGIN:
@@ -248,16 +253,16 @@ def decode_jwt(jwt_str: str) -> tuple:
         return None, f"❌ 其他錯誤: {e}"
     
 
-# 函數：檢查 JWT Token 是否存在
+# 函式：檢查 JWT Token 是否存在
 def attach_jwt_if_available(f):
-    @wraps(f) # 確保原始函數的元資料不會被覆蓋
-    # @wraps(f) 是一個裝飾器，用來保留原始函數的元資料
-    # (例如函數名稱、文檔字串等)，這樣在調試或使用函數時，可以獲得正確的資訊。
-    # 當你使用裝飾器來包裝一個函數時，
-    # 原始函數的名稱、文檔字串等資訊不會被改變。
+    @wraps(f) # 確保原始函式的元資料不會被覆蓋
+    # @wraps(f) 是一個裝飾器，用來保留原始函式的元資料
+    # (例如函式名稱、文檔字串等)，這樣在調試或使用函式時，可以獲得正確的資訊。
+    # 當你使用裝飾器來包裝一個函式時，
+    # 原始函式的名稱、文檔字串等資訊不會被改變。
     def wrapper(*args, **kwargs): 
         # 從請求的 cookies 中獲取 JWT Token        
-        print("開始檢查TOKEN")
+        log("開始檢查TOKEN")
         token = request.cookies.get("fido2_token")
         # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
@@ -270,9 +275,131 @@ def attach_jwt_if_available(f):
         # 如果有錯誤，則會是錯誤訊息
         request.jwt_error = jwt_error 
         if payload:
-            print("JWT Token 有效",payload)
+            log("JWT Token 有效",payload)
         if jwt_error:
-            print("JWT Token 無效",jwt_error)
+            log("JWT Token 無效",jwt_error)
         return f(*args, **kwargs)
     return wrapper    
 
+
+# 函式：連接 PIP FIDO2 伺服器
+def connect_pip_fido2(
+    endpoint: str,
+    payload: dict,
+    include_source_dist: bool = False,
+    expect_token: bool = False,
+    raw_mode: bool = False
+):
+    """
+    向 FIDO2 發送 POST 請求並處理回應
+
+    回傳：
+        raw_mode=False（預設）→ 回傳 Flask response 或錯誤 response
+        raw_mode=True → 成功: (資料, None)，失敗: (None, 錯誤訊息)
+    """
+    try:
+        post_url = PIPS["Fido2"] + endpoint
+        if include_source_dist:
+            payload["source"] = "card.example.com"
+            payload["dist"] = "fido2.example.com"
+
+        log(f"🔗 向 FIDO2 發送 POST 至 {post_url}，資料：{payload}")
+        res = requests.post(post_url, json=payload, timeout=10, verify=False)
+        log("📥 回應狀態碼：", res.status_code)
+
+        if res.status_code != 200:
+            error_msg = f"FIDO2 驗證失敗（{res.status_code}）：{res.text}"
+            log("🚫", error_msg)
+            if raw_mode:
+                return None, error_msg
+            return jsonify({"error": "FIDO2 驗證失敗", "details": res.text}), 502
+
+        # ✅ 回應成功，處理內容
+        result = res.json()
+        token = result.get("token")
+
+        if expect_token:
+            if not token:
+                log("🚫 成功但缺少 token")
+                if raw_mode:
+                    return None, "登入成功但未回傳 token"
+                return jsonify({"error": "登入成功但未回傳 token"}), 502
+
+            log(f"🔐 成功取得 Token: {token}")
+            if raw_mode:
+                return token, None
+
+            resp = make_response(jsonify(result), 200)
+            resp.set_cookie("fido2_token", token, max_age=3600, httponly=True)
+            log("🍪 已設置 Cookie")
+            return resp
+
+        # 非 expect_token 情境
+        if raw_mode:
+            return result, None
+        return jsonify(result), 200
+
+    except requests.RequestException as e:
+        error_msg = f"無法連線 FIDO2：{str(e)}"
+        log("❌", error_msg)
+        if raw_mode:
+            return None, error_msg
+        return jsonify({"error": error_msg}), 503
+
+
+# 函式：從 FIDO2 JWT 簽發 PDP 專屬 JWT
+def issue_pdp_token_from_fido2_jwt(token: str) -> tuple:
+    """
+    驗證 FIDO2 回傳的 JWT 並重新簽發 PDP 專屬 JWT。
+
+    參數:
+        token (str): FIDO2 回傳的 JWT Token。
+
+    回傳:
+        (dict, None) 成功: 包含新 token 的字典
+        (None, str) 失敗: 錯誤訊息字串
+    """
+    # ✅ 驗證 JWT
+    log("🔍 開始驗證 FIDO2 回傳的 JWT")
+    payload, decode_err = decode_jwt(token)
+    if decode_err:
+        log(f"🚫 JWT 解碼失敗: {decode_err}")
+        return None, decode_err
+
+    username = payload.get("sub")
+    if not username:
+        log("🚫 JWT 中缺少 sub 欄位")
+        return None, "JWT 中缺少 sub 欄位"
+
+    # ✅ 查詢 LDAP 權限
+    log(f"🔍 開始查詢 LDAP 權限，使用者: {username}")
+    result, status = LDAP_ManagerControl("search", username=username)
+    if status != 200:
+        log(f"🚫 查詢 LDAP 權限失敗: {result['message']}")
+        return None, f"查詢 LDAP 權限失敗：{result['message']}"
+
+
+    log(f"🔐 使用者 {username} 的登入等級為: {result["level"]}")
+    login_level = int(result["level"])  # LDAP 回傳的登入等級
+    # ✅ 簽發 PDP 專屬 JWT
+    log("🔍 開始簽發 PDP 專屬 JWT")
+    new_token = generate_jwt(payload, login_level)
+    if not new_token:
+        log("🚫 簽發 PDP 專屬 JWT 失敗")
+        return None, "簽發 PDP 專屬 JWT 失敗"
+    return {
+        "status": "ok",
+        "message": "成功認證",
+        "token": new_token
+    }, None
+
+# 函式：生成授權回應
+def make_authz_response(allow, message="", redirect_url=None, status=200, rejwt=None):
+    response = {
+        "allow": allow,
+        "message": message,
+        "redirect_url": redirect_url,
+    }
+    if rejwt is not None:
+        response["reJWT"] = rejwt
+    return jsonify(response), status
