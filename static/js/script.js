@@ -13,6 +13,7 @@ function tryRender() {
     }
 }
 
+// --- 卡片渲染區塊 ---
 function renderCards(cards) {
     const hand = document.getElementById("hand");
     const tooltip = document.getElementById("tooltip");
@@ -37,7 +38,8 @@ function renderCards(cards) {
         frontDiv.className = "card-front";
 
         const a = document.createElement("a");
-        a.href = card.link;
+        a.href = "#";
+        a.dataset.link = card.link;   
         a.dataset.tooltip = card.tooltip;
 
         const img = document.createElement("img");
@@ -76,8 +78,9 @@ function renderCards(cards) {
                     if (content) content.style.display = "flex";
                 } else {
                     const link = cardDiv.querySelector("a");
-                    if (link && link.href) {
-                        window.open(link.href, "_blank");
+                    if (link && link.dataset.link) {
+                        const target = link.dataset.link;
+                        permission_check(target);
                     }
                 }
             } else {
@@ -93,7 +96,7 @@ function renderCards(cards) {
         });
     });
 }
-
+// --- 卡片背面創建區塊 ---
 function createCardBack(i) {
     const backDiv = document.createElement("div");
     backDiv.className = "card-back";
@@ -117,7 +120,7 @@ function createCardBack(i) {
 
     return backDiv;
 }
-
+// --- 按鈕創建區塊 ---
 function createButton(href, text, className, onClickFnName = null) {
     const btn = document.createElement("button");
     btn.textContent = text;
@@ -136,7 +139,7 @@ function createButton(href, text, className, onClickFnName = null) {
 
     return btn;
 }
-
+// --- 工具提示事件處理區塊 ---
 function setTooltipEvents(element, tooltip) {
     element.addEventListener("mouseenter", () => {
         tooltip.textContent = element.dataset.tooltip;
@@ -150,12 +153,12 @@ function setTooltipEvents(element, tooltip) {
         tooltip.style.display = "none";
     });
 }
-
+// --- DOMContentLoaded 事件處理區塊 ---
 document.addEventListener("DOMContentLoaded", () => {
     domReady = true;
     tryRender();
 });
-
+// 
 document.addEventListener("click", (e) => {
     const isCard = e.target.closest(".card");
     const isBackContent = e.target.closest(".card-back-content");
@@ -171,8 +174,9 @@ document.addEventListener("click", (e) => {
         allBackContents.forEach(c => c.style.display = "none");
     }
 });
-
+// 
 const bg = document.querySelector(".background");
+// 
 if (bg.complete) {
     bgReady = true;
 } else {
@@ -183,6 +187,7 @@ if (bg.complete) {
 }
 
 const mainBg = document.querySelector('.main-bg');
+// 設定背景圖片的初始透明度
 if (mainBg.complete) {
     mainBg.style.opacity = 1;
     bgLoaded = true;
@@ -195,11 +200,13 @@ if (mainBg.complete) {
     };
 }
 
+// 檢查是否已經重新載入過頁面
 if (!sessionStorage.getItem("reloaded")) {
     sessionStorage.setItem("reloaded", "yes");
     window.location.reload();
 }
 
+// 載入卡片資料
 fetch("static/data/cards.json")
     .then(res => res.json())
     .then(cardGroups => {
@@ -252,6 +259,7 @@ async function sendRequest(url, method, data) {
     }
 }
 
+// 函式功能 : 處理註冊流程
 async function handleRegister(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -263,16 +271,21 @@ async function handleRegister(event) {
     try {
         // 向後端請求 WebAuthn 註冊選項
         const options = await sendRequest("/register-begin", "POST", { username });
+        console.log("取得 options:", options);
+
         //
         // 判斷 options 是否 error
         if (options.error) {
             console.error("註冊錯誤:", options.error);
-            alert("註冊失敗:" + options.error + "！");
+
+            
+            alert("註冊失敗:" + options.error + "！\nMessage："+ options.message);
             return;
         }
         // 後端正確回應後，將 options 轉換為 WebAuthn API 可用的格式
         options.publicKey.challenge = base64UrlToUint8Array(options.publicKey.challenge);
         options.publicKey.user.id = base64UrlToUint8Array(options.publicKey.user.id);
+        console.log("轉換後的 options:", options);
         // credential 是 瀏覽器 API 運算後的憑證資訊
         const credential = await navigator.credentials.create({ publicKey: options.publicKey })
         // 顯示憑證資訊在網頁上
@@ -305,6 +318,7 @@ async function handleRegister(event) {
         }
 }
 
+// 函式功能 : 處理登入流程
 async function handleLogin(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -366,6 +380,7 @@ async function handleLogin(event) {
         }
 }
 
+// 函式功能 : 從事件中取得使用者名稱
 function getUsernameFromEvent(event) {
     const card = event.target.closest(".card");
     if (!card) return null;
@@ -412,6 +427,60 @@ function NetworkError(message) {
     return false;
 }
 
+/* 
+    函式名稱: permission_check
+    作用: 檢查使用者是否有權限訪問特定 URL
+    參數: targetUrl (string) - 目標 URL
+    回傳: 根據權限檢查結果開啟新頁面或顯示錯誤訊息
+*/
+let isCheckingPermission = false;
+function permission_check(target) {
+    if (isCheckingPermission) return;
+    isCheckingPermission = true;
+
+    if (!target) {
+        alert("❌ 無效的目標 URL");
+        isCheckingPermission = false;
+        return;
+    }
+
+    console.log("🔍 檢查權限，目標 URL:", target);
+    fetch("/check_permission", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include",  // ✅ 要帶上 cookie 給 PEP
+        body: JSON.stringify({ target: target })
+    })
+    .then(async res => {
+        const data = await res.json(); // ✅ 總是解析回傳 JSON，不管狀態碼是不是 200
+
+        if (res.ok) {
+            if (data.allow) {
+                console.log("✅ 允許跳轉，開啟目標頁面");
+                window.open(data.target, "_blank");
+            } else {
+                alert("❌ PDP 拒絕\n原因：" + (data.message || "未提供"));
+            }
+        } else {
+            // ❌ 雖然錯誤但有回傳 JSON（例如權限不足）
+            console.warn("⚠️ PDP 回應：", data.message);
+            alert("⚠️ PDP 回應\n原因：" + (data.message || "未知"));
+        }
+    })
+    .catch(err => {
+        console.error("🔴 權限檢查錯誤:", err);
+        alert("⚠️ 發生錯誤，請稍後再試");
+    })
+    .finally(() => {
+        isCheckingPermission = false;
+    });
+}
+
+
+
+
 
 window.sendRequest = sendRequest;
 window.handleRegister = handleRegister;
@@ -420,3 +489,4 @@ window.getUsernameFromEvent = getUsernameFromEvent;
 window.base64UrlToUint8Array = base64UrlToUint8Array;
 window.convertCredential = convertCredential;
 window.NetworkError = NetworkError;
+window.permission_check = permission_check;

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>LDAP 使用者管理</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #eee; }
+        .form-section { margin-top: 20px; }
+        .form-section input, select, button { padding: 6px 10px; margin-right: 10px; }
+        .hidden { display: none; }
+        pre { background: #fff; padding: 10px; border: 1px solid #ccc; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>LDAP 使用者管理</h2>
+    
+    <!-- 使用者列表放上方 -->
+    <table id="userTable" style="display: none;">
+        <thead>
+            <tr>
+                <th>帳號</th>
+                <th>權限等級</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+    </table>
+    
+    <!-- 表單功能區 -->
+    <div class="form-section">
+        <input type="text" id="username" placeholder="輸入帳號">
+        <select id="action" onchange="toggleLevelSelect()">
+            <option value="create">新增使用者</option>
+            <option value="change">變更權限</option>
+            <option value="search">查詢使用者</option>
+            <option value="list">列出所有使用者</option>
+        </select>
+        <select id="level" class="hidden">
+            <option value="1">一般使用者</option>
+            <option value="2">管理者</option>
+            <option value="3">超級管理者</option>
+        </select>
+        <button onclick="submitForm()">送出</button>
+    </div>
+    
+    <pre id="output" style="display:none;"></pre>
+
+    <script>
+    function toggleLevelSelect() {
+        const action = document.getElementById("action").value;
+        const level = document.getElementById("level");
+        level.classList.toggle("hidden", action !== "change");
+    }
+
+    function renderUserTable(users) {
+        const table = document.getElementById("userTable");
+        const tbody = document.getElementById("userTableBody");
+        tbody.innerHTML = "";
+        users.forEach(u => {
+            const row = `<tr><td>${u.username}</td><td>${u.employeeType	}</td></tr>`;
+            tbody.insertAdjacentHTML("beforeend", row);
+        });
+        table.style.display = "table";
+    }
+
+    function submitForm() {
+        const username = document.getElementById("username").value.trim();
+        const level = document.getElementById("level").value;
+        const action = document.getElementById("action").value;
+
+        const payload = { action };
+        if (username) payload.username = username;
+        if (action === "change") payload.level = level;
+
+        fetch("/ldap-api", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(json => ({ status: res.status, json })))
+        .then(({ status, json }) => {
+            const output = document.getElementById("output");
+            output.style.display = "block";
+            output.textContent = JSON.stringify(json, null, 2);
+
+            if (json.users) {
+                renderUserTable(json.users);
+            } else {
+                document.getElementById("userTable").style.display = "none";
+            }
+
+            if (status !== 200) {
+                alert("❌ 發生錯誤：" + (json.error || json.message));
+            }
+        })
+        .catch(err => alert("❌ 錯誤: " + err));
+    }
+
+    window.onload = () => {
+        fetch("/ldap-api", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "list" })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.users) renderUserTable(data.users);
+        });
+    };
+    </script>
+</body>
+</html>

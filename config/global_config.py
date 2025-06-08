@@ -29,8 +29,11 @@ RP_ID = "akitawan.moe"  # Fido2 用到
 ORIGIN = "akitawan.moe" # 改成你的正式域名，且使用 HTTPS
 
 
+# 內網代理
+PDP = "https://private.inside:8964/PDP/"
+
 SOURCE_KEY_URLS = {
-    "fido2": "https://192.168.50.222:5000/oauth2/jwks.json",  # FIDO2 的 JWKS URL
+    "fido2": "https://private.inside:8964/Fido2/oauth2/jwks.json",  # FIDO2 的 JWKS URL
 }
 
 """ General Functions """
@@ -70,15 +73,15 @@ def unsanitize_username(safe_username):
 def load_public_key_by_source(source: str) -> jwk.JWK:
     # 檢查來源是否在對照表中
     url_or_path = SOURCE_KEY_URLS[source]
-    print(f"取得來源 {source} 的公鑰: {url_or_path}")
+    log(f"取得來源 {source} 的公鑰: {url_or_path}")
     # 如果來源是 URL，則從 URL 下載公鑰
     if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
-        res = requests.get(url_or_path)
+        res = requests.get(url_or_path, verify=False)  # 👈 加上 verify=False
         res.raise_for_status()
         return jwk.JWK(**res.json()["keys"][0])
     # 如果來源是本地檔案，則從檔案讀取公鑰
     else:
-        print(f"從本地檔案讀取公鑰: {url_or_path}")
+        log(f"從本地檔案讀取公鑰: {url_or_path}")
         with open(url_or_path, "rb") as f: 
             return jwk.JWK.from_pem(f.read())
         
@@ -86,29 +89,30 @@ def load_public_key_by_source(source: str) -> jwk.JWK:
 # 作用: 驗證 JWT Token 的簽名，並解密 payload
 # 參數: JWT Token 字串
 # 回傳: payload 字典，或 None 以及錯誤訊息
-# 入口網站只驗簽
+
 def decode_jwt(jwt_str: str):
     try:
         public_key = load_public_key_by_source("fido2")
         # private_key = load_public_key_by_source("fido2")  # 假設私鑰與公鑰相同，實際應用中應分開
         # Step 1: 驗章（用 A 的公鑰）
-        print("驗簽 JWT ")
+        log("驗簽 JWT ")
         token = jwt.JWT(jwt=jwt_str, key=public_key)
         # Step 2: 從 token.claims 中讀出 JWE 字串（加密的 payload）
-        # print("📦 取得加密的 JWE Payload")
+        # log("📦 取得加密的 JWE Payload")
         # encrypted_jwe_str = token.claims
         # jwe_token = jwe.JWE()
         # 先不解密
-        print("解密 payload(暫不解密只驗簽)")
+        log("解密 payload(暫不解密只驗簽)")
         # jwe_token.deserialize(encrypted_jwe_str, key=private_key)
         # Step 4: 解析 payload 為 JSON
         # payload = json.loads(jwe_token.payload.decode("utf-8"))
-        payload = "未解密的 payload，可簽發 JWT"
-        print("✅ 解密完成，Payload:", payload)
+        payload = json.loads(token.claims)
+
+        log("✅ 解密完成，Payload:", payload)
 
         # Step 5: 驗證發行者
-        # if payload.get("iss") != ORIGIN:
-            # raise ValueError("無效的發行者")
+        if payload.get("iss") != ORIGIN:
+            raise ValueError("無效的發行者")
 
         return payload, None
 
@@ -131,9 +135,9 @@ def attach_jwt_if_available(f):
     # 原始函數的名稱、文檔字串等資訊不會被改變。
     def wrapper(*args, **kwargs): 
         # 從請求的 cookies 中獲取 JWT Token        
-        print("開始檢查TOKEN")
+        log("開始檢查TOKEN")
         token = request.cookies.get("pdp_token")
-        print(f"取得的 JWT Token: {token}")
+        log(f"取得的 JWT Token: {token}")
         # 嘗試解碼 JWT Token
         # 如果 token 不存在，payload 會是 None
         # 如果 token 存在但無效，payload 會是 None
@@ -146,8 +150,55 @@ def attach_jwt_if_available(f):
         # 如果有錯誤，則會是錯誤訊息
         request.jwt_error = jwt_error 
         if payload:
-            print("JWT Token 有效",payload)
+            log("JWT Token 有效",payload)
         if jwt_error:
-            print("JWT Token 無效",jwt_error)
+            log("JWT Token 無效",jwt_error)
         return f(*args, **kwargs)
     return wrapper    
+
+
+#  函數：記錄訊息
+def log(*args):
+    now = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+    print(now, *args)
+
+
+# 傳送 JWT payload 和目標網址給 PDP 進行授權檢查
+def check_permission_via_pdp(payload, target_path="/"):
+    """
+    發送 JWT payload + 目標網址給 PDP 做授權檢查
+    回傳 dict: { allow: bool, redirect_url: str, message: str }
+    """
+    try:
+        log(f"📨 向 PDP 驗證權限（目標：{target_path}）…")
+        response = requests.post(
+            PDP + "authz-check",
+            json={
+                "payload": payload,
+                "target": target_path
+            },
+            timeout=10,
+            verify=False
+        )
+        data = response.json()
+        log("🔗 PDP 回應:", data)
+        return {
+            "allow": data.get("allow", False),
+            "redirect_url": data.get("redirect_url", None),
+            "message": data.get("message", ""),
+            "reJWT": data.get("reJWT",None)  
+        }
+    except requests.RequestException as e:
+        log(f"❌ PDP 無法連線：{e}")
+        return {
+            "allow": False,
+            "redirect_url": None,
+            "message": "PDP 連線失敗"
+        }
+    except Exception as e:
+        log(f"❌ PDP 回傳解析錯誤：{e}")
+        return {
+            "allow": False,
+            "redirect_url": None,
+            "message": "PDP 回傳資料格式錯誤"
+        }
